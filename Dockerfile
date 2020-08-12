@@ -32,4 +32,4 @@ RUN \
     /app/utils.py \
     /app/config.yml.template
 
-CMD [ "python", "/app/sonarr_youtubedl.py" ]
+CMD [ "python", "-u", "/app/sonarr_youtubedl.py" ]
