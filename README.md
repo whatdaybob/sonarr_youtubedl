@@ -42,7 +42,7 @@ services:
 | Parameter | Function |
 | :----: | --- |
 | `-v /config` | sonarr_youtubedl configs |
-| `-v /sonarr_root` | Location of where your Sonarrs TV Show root is |
+| `-v /sonarr_root` | Library location from Sonarr container |
 
 ## Configuration file?
 
