@@ -30,7 +30,6 @@ RUN \
     chmod a+x \
     /app/sonarr_youtubedl.py \ 
     /app/utils.py \
-    /app/config.yml \
     /app/config.yml.template
 
 CMD [ "python", "/app/sonarr_youtubedl.py" ]
