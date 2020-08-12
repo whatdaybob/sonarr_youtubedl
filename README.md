@@ -1,7 +1,7 @@
 # sonarr_youtubedl by [@whatdaybob](https://github.com/whatdaybob) 
 
 ## What is it?
-Use this docker image to hook Youtube-DL into Sonarr and download your webseries from the list of [supported sites](https://ytdl-org.github.io/youtube-dl/supportedsites.html).
+Use this docker image to hook [Youtube-DL](https://ytdl-org.github.io/youtube-dl/index.html) into [Sonarr](https://sonarr.tv/) and download your webseries from the list of [supported sites](https://ytdl-org.github.io/youtube-dl/supportedsites.html).
 
 ## How do I use it?
 Firstly you need a series that is available online in the supported sites that YouTube-DL can grab from. 
