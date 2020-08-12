@@ -1,0 +1,10 @@
+sonarr:
+    host: 192.168.1.123
+    port: 1234
+    apikey: 12341234
+    ssl: false
+series:
+  - title: Shenanigans
+    url: https://www.youtube.com/playlist?list=PLTur7oukosPFqFQkSpsJC8t2o9mRaxfVk
+  - title: Ready Set Show
+    url: https://www.youtube.com/playlist?list=PLTur7oukosPEwFTPJ1WeDvitauWzRiIhp
