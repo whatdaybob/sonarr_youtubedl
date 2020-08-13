@@ -10,6 +10,8 @@ import time
 
 date_format = "%Y-%m-%dT%H:%M:%SZ"
 now = datetime.now()
+CONFIGPATH = os.environ['CONFIGPATH']
+
 
 class SonarrYTDL(object):
 
@@ -17,11 +19,12 @@ class SonarrYTDL(object):
         """Set up app with config"""
         checkconfig()
         with open(
-            "/config/config.yml", 
+            # "/config/config.yml",
+            CONFIGPATH,
             "r"
         ) as ymlfile:
             cfg = yaml.load(
-                ymlfile, 
+                ymlfile,
                 Loader=yaml.BaseLoader
             )
         self.ipaddr = cfg['sonarr']['host']
@@ -30,8 +33,8 @@ class SonarrYTDL(object):
         if cfg['sonarr']['ssl']:
             scheme == "https"
         self.base_url = "{0}://{1}:{2}".format(
-            scheme, 
-            self.ipaddr, 
+            scheme,
+            self.ipaddr,
             self.port
         )
         self.api_key = cfg['sonarr']['apikey']
@@ -41,7 +44,7 @@ class SonarrYTDL(object):
         """Returns all episodes for the given series"""
         args = {'seriesId': series_id}
         res = self.request_get("{}/api/episode".format(
-            self.base_url), 
+            self.base_url),
             args
         )
         return res.json()
@@ -49,7 +52,7 @@ class SonarrYTDL(object):
     def get_episode_files_by_series_id(self, series_id):
         """Returns all episode files for the given series"""
         res = self.request_get("{}/api/episodefile?seriesId={}".format(
-            self.base_url, 
+            self.base_url,
             series_id
         ))
         return res.json()
@@ -94,9 +97,9 @@ class SonarrYTDL(object):
         if params is not None:
             args.update(params)
         res = requests.post(
-            url, 
-            headers=headers, 
-            params=args, 
+            url,
+            headers=headers,
+            params=args,
             json=jsondata
         )
         return res
@@ -104,12 +107,12 @@ class SonarrYTDL(object):
     def rescanseries(self, series_id):
         """Refresh series information from trakt and rescan disk"""
         data = {
-            "name": "RescanSeries", 
+            "name": "RescanSeries",
             "seriesId": str(series_id)
         }
         res = self.request_put(
             "{}/api/command".format(self.base_url),
-            None, 
+            None,
             data
         )
         return res.json()
@@ -161,7 +164,6 @@ class SonarrYTDL(object):
                     ser['title'],
                     len(episodes)
                 ))
-                
         return needed
 
 
@@ -179,7 +181,7 @@ def ytsearch(ydl_opts, playlist):
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             result = ydl.extract_info(
-                playlist, 
+                playlist,
                 download=False
             )
     except Exception as e:
@@ -214,10 +216,10 @@ def download(series, episodes, client):
                         'format': 'bestvideo[width<=1920]+bestaudio/best[width<=1920]',
                         'merge-output-format': 'mp4',
                         'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
-                            ser['path'], 
-                            eps['seasonNumber'], 
-                            ser['title'], 
-                            eps['episodeNumber'], 
+                            ser['path'],
+                            eps['seasonNumber'],
+                            ser['title'],
+                            eps['episodeNumber'],
                             eps['title']
                         )
                     }
