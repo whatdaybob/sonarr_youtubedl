@@ -16,44 +16,70 @@ class SonarrYTDL(object):
     def __init__(self):
         """Set up app with config"""
         checkconfig()
-        with open("/config/config.yml", "r") as ymlfile:
-            cfg = yaml.load(ymlfile, Loader=yaml.BaseLoader)
+        with open(
+            "/config/config.yml", 
+            "r"
+        ) as ymlfile:
+            cfg = yaml.load(
+                ymlfile, 
+                Loader=yaml.BaseLoader
+            )
         self.ipaddr = cfg['sonarr']['host']
         self.port = str(cfg['sonarr']['port'])
         scheme = "http"
         if cfg['sonarr']['ssl']:
             scheme == "https"
-        self.base_url = "{0}://{1}:{2}".format(scheme, self.ipaddr, self.port)
+        self.base_url = "{0}://{1}:{2}".format(
+            scheme, 
+            self.ipaddr, 
+            self.port
+        )
         self.api_key = cfg['sonarr']['apikey']
         self.series = cfg["series"]
 
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series"""
         args = {'seriesId': series_id}
-        res = self.request_get("{}/api/episode".format(self.base_url), args)
+        res = self.request_get("{}/api/episode".format(
+            self.base_url), 
+            args
+        )
         return res.json()
 
     def get_episode_files_by_series_id(self, series_id):
         """Returns all episode files for the given series"""
-        res = self.request_get("{}/api/episodefile?seriesId={}".format(self.base_url, series_id))
+        res = self.request_get("{}/api/episodefile?seriesId={}".format(
+            self.base_url, 
+            series_id
+        ))
         return res.json()
 
     def get_series(self):
         """Return all series in your collection"""
-        res = self.request_get("{}/api/series".format(self.base_url))
+        res = self.request_get("{}/api/series".format(
+            self.base_url
+        ))
         return res.json()
 
     def get_series_by_series_id(self, series_id):
         """Return the series with the matching ID or 404 if no matching series is found"""
-        res = self.request_get("{}/api/series/{}".format(self.base_url, series_id))
+        res = self.request_get("{}/api/series/{}".format(
+            self.base_url,
+            series_id
+        ))
         return res.json()
 
     def request_get(self, url, params=None):
         """Wrapper on the requests.get"""
-        args = {"apikey": self.api_key}
+        args = {
+            "apikey": self.api_key
+        }
         if params is not None:
             args.update(params)
-        url = "{}?{}".format(url, urllib.parse.urlencode(args))
+        url = "{}?{}".format(
+            url,
+            urllib.parse.urlencode(args)
+        )
         res = requests.get(url)
         return res
 
@@ -67,13 +93,25 @@ class SonarrYTDL(object):
         )
         if params is not None:
             args.update(params)
-        res = requests.post(url, headers=headers, params=args, json=jsondata)
+        res = requests.post(
+            url, 
+            headers=headers, 
+            params=args, 
+            json=jsondata
+        )
         return res
 
     def rescanseries(self, series_id):
         """Refresh series information from trakt and rescan disk"""
-        data = {"name": "RescanSeries", "seriesId": str(series_id)}
-        res = self.request_put("{}/api/command".format(self.base_url), None, data)
+        data = {
+            "name": "RescanSeries", 
+            "seriesId": str(series_id)
+        }
+        res = self.request_put(
+            "{}/api/command".format(self.base_url),
+            None, 
+            data
+        )
         return res.json()
 
     def filterseries(self):
@@ -108,14 +146,21 @@ class SonarrYTDL(object):
                     episodes.remove(eps)
                 else:
                     count += 1
-                    print('{0}: {1} - {2}'.format(count, ser['title'], eps['title']))
+                    print('{0}: {1} - {2}'.format(
+                        count,
+                        ser['title'],
+                        eps['title']
+                    ))
                     needed.append(eps)
                     continue
             if len(episodes) == 0:
                 print('{0} no episodes needed'.format(ser['title']))
                 series.remove(ser)
             else:
-                print('{0} missing {1} episodes'.format(ser['title'], len(episodes)))
+                print('{0} missing {1} episodes'.format(
+                    ser['title'],
+                    len(episodes)
+                ))
                 
         return needed
 
@@ -133,7 +178,10 @@ def update_opts(regextitle):
 def ytsearch(ydl_opts, playlist):
     try:
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.extract_info(playlist, download=False)
+            result = ydl.extract_info(
+                playlist, 
+                download=False
+            )
     except Exception as e:
         print(e)
     else:
@@ -165,7 +213,13 @@ def download(series, episodes, client):
                     ytdl_format_options = {
                         'format': 'bestvideo[width<=1920]+bestaudio/best[width<=1920]',
                         'merge-output-format': 'mp4',
-                        'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(ser['path'], eps['seasonNumber'], ser['title'], eps['episodeNumber'], eps['title'])
+                        'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
+                            ser['path'], 
+                            eps['seasonNumber'], 
+                            ser['title'], 
+                            eps['episodeNumber'], 
+                            eps['title']
+                        )
                     }
                     youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
                     client.rescanseries(ser['id'])
