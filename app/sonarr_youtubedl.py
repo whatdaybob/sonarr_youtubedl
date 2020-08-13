@@ -3,7 +3,7 @@ import requests
 import urllib.parse
 import youtube_dl
 import os
-from utils import upperescape, checkconfig
+from utils import upperescape, checkconfig, offsethandler
 from datetime import datetime
 import schedule
 import time
@@ -124,6 +124,8 @@ class SonarrYTDL(object):
         for ser in series[:]:
             for wnt in self.series:
                 if wnt['title'] == ser['title']:
+                    if 'offset' in wnt:
+                        ser['offset'] = wnt['offset']
                     ser['url'] = wnt['url']
                     matched.append(ser)
         for check in matched:
@@ -141,6 +143,8 @@ class SonarrYTDL(object):
                 eps_date = now
                 if "airDateUtc" in eps:
                     eps_date = datetime.strptime(eps['airDateUtc'], date_format)
+                    if 'offset' in ser:
+                        eps_date = offsethandler(eps_date, ser['offset'])
                 if not eps['monitored']:
                     episodes.remove(eps)
                 elif eps['hasFile']:
