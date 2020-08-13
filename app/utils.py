@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import datetime
 
 CONFIGPATH = os.environ['CONFIGPATH']
 
@@ -29,3 +30,24 @@ def checkconfig():
         sys.exit("Create a config.yml using config.yml.template as an example.")
     else:
         print('Configuration Found. Loading file.')
+
+
+def offsethandler(airdate, offset):
+    """ Takes the offset given and adjusts check
+
+    Useful for priority shows
+    """
+    weeks = 0
+    days = 0
+    hours = 0
+    minutes = 0
+    if 'weeks' in offset:
+        weeks = int(offset['weeks'])
+    if 'days' in offset:
+        days = int(offset['days'])
+    if 'hours' in offset:
+        hours = int(offset['hours'])
+    if 'minutes' in offset:
+        minutes = int(offset['minutes'])
+    airdate = airdate + datetime.timedelta(weeks=weeks, days=days, hours=hours, minutes=minutes)
+    return airdate
