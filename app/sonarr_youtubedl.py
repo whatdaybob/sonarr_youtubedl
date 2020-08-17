@@ -10,7 +10,8 @@ import time
 
 date_format = "%Y-%m-%dT%H:%M:%SZ"
 now = datetime.now()
-CONFIGPATH = os.environ['CONFIGPATH']
+CONFIGFILE = os.environ['CONFIGPATH']
+CONFIGPATH = CONFIGFILE.replace('config.yml', '')
 
 
 class SonarrYTDL(object):
@@ -20,7 +21,7 @@ class SonarrYTDL(object):
         checkconfig()
         with open(
             # "/config/config.yml",
-            CONFIGPATH,
+            CONFIGFILE,
             "r"
         ) as ymlfile:
             cfg = yaml.load(
@@ -126,6 +127,8 @@ class SonarrYTDL(object):
                 if wnt['title'] == ser['title']:
                     if 'offset' in wnt:
                         ser['offset'] = wnt['offset']
+                    if 'cookies_file' in wnt:
+                        ser['cookies_file'] = wnt['cookies_file']
                     ser['url'] = wnt['url']
                     matched.append(ser)
         for check in matched:
@@ -171,14 +174,25 @@ class SonarrYTDL(object):
         return needed
 
 
-def update_opts(regextitle):
-    ydl_search = {
+def appendcookie(ytdlopts, cookies=None):
+    if cookies is not None:
+        ytdlopts.update({
+            'cookie': CONFIGPATH + cookies
+        })
+        return ytdlopts
+    else:
+        return ytdlopts
+
+
+def ytdl_eps_search_opts(regextitle, cookies=None):
+    ytdlopts = {
         'ignoreerrors': True,
         'playlistreverse': True,
         'matchtitle': regextitle,
         'quiet': True,
     }
-    return ydl_search
+    ytdlopts = appendcookie(ytdlopts, cookies)
+    return ytdlopts
 
 
 def ytsearch(ydl_opts, playlist):
@@ -212,8 +226,11 @@ def download(series, episodes, client):
     for s, ser in enumerate(series):
         for e, eps in enumerate(episodes):
             if ser['id'] == eps['seriesId']:
+                cookies = None
                 url = ser['url']
-                ydleps = update_opts(upperescape(eps['title']))
+                if 'cookies_file' in ser:
+                    cookies = ser['cookies_file']
+                ydleps = ytdl_eps_search_opts(upperescape(eps['title']), cookies)
                 found, dlurl = ytsearch(ydleps, url)
                 if found:
                     ytdl_format_options = {
@@ -227,6 +244,7 @@ def download(series, episodes, client):
                             eps['title']
                         )
                     }
+                    ytdl_format_options = appendcookie(ytdl_format_options, cookies)
                     youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
                     client.rescanseries(ser['id'])
 
@@ -241,7 +259,7 @@ def main():
 
 print('Initial run')
 main()
-schedule.every(1).minutes.do(main)
+schedule.every(5).minutes.do(main)
 
 while True:
     schedule.run_pending()
