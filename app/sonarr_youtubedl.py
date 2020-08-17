@@ -40,6 +40,7 @@ class SonarrYTDL(object):
         )
         self.api_key = cfg['sonarr']['apikey']
         self.series = cfg["series"]
+        self.ytdl_format = cfg['ytdl']['default_format']
 
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series"""
@@ -129,6 +130,8 @@ class SonarrYTDL(object):
                         ser['offset'] = wnt['offset']
                     if 'cookies_file' in wnt:
                         ser['cookies_file'] = wnt['cookies_file']
+                    if 'format' in wnt:
+                        ser['format'] = wnt['format']
                     ser['url'] = wnt['url']
                     matched.append(ser)
         for check in matched:
@@ -173,87 +176,94 @@ class SonarrYTDL(object):
                 ))
         return needed
 
-
-def appendcookie(ytdlopts, cookies=None):
-    if cookies is not None:
-        ytdlopts.update({
-            'cookie': CONFIGPATH + cookies
-        })
-        return ytdlopts
-    else:
-        return ytdlopts
-
-
-def ytdl_eps_search_opts(regextitle, cookies=None):
-    ytdlopts = {
-        'ignoreerrors': True,
-        'playlistreverse': True,
-        'matchtitle': regextitle,
-        'quiet': True,
-    }
-    ytdlopts = appendcookie(ytdlopts, cookies)
-    return ytdlopts
-
-
-def ytsearch(ydl_opts, playlist):
-    try:
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.extract_info(
-                playlist,
-                download=False
-            )
-    except Exception as e:
-        print(e)
-    else:
-        video_url = None
-        if 'entries' in result and len(result['entries']) > 0:
-            try:
-                video_url = result['entries'][0].get('webpage_url')
-            except Exception as e:
-                print(e)
+    def appendcookie(self, ytdlopts, cookies=None):
+        if cookies is not None:
+            ytdlopts.update({
+                'cookie': CONFIGPATH + cookies
+            })
+            return ytdlopts
         else:
-            video_url = result.get('webpage_url')
-        if playlist == video_url:
-            return False, ''
-        if video_url is None:
-            print('')
-            return False, ''
+            return ytdlopts
+
+    def customformat(self, ytdlopts, customformat=None):
+        if customformat is not None:
+            ytdlopts.update({
+                'format': customformat
+            })
+            return ytdlopts
         else:
-            return True, video_url
+            return ytdlopts
 
+    def ytdl_eps_search_opts(self, regextitle, cookies=None):
+        ytdlopts = {
+            'ignoreerrors': True,
+            'playlistreverse': True,
+            'matchtitle': regextitle,
+            'quiet': True,
+        }
+        ytdlopts = self.appendcookie(ytdlopts, cookies)
+        return ytdlopts
 
-def download(series, episodes, client):
-    for s, ser in enumerate(series):
-        for e, eps in enumerate(episodes):
-            if ser['id'] == eps['seriesId']:
-                cookies = None
-                url = ser['url']
-                if 'cookies_file' in ser:
-                    cookies = ser['cookies_file']
-                ydleps = ytdl_eps_search_opts(upperescape(eps['title']), cookies)
-                found, dlurl = ytsearch(ydleps, url)
-                if found:
-                    ytdl_format_options = {
-                        'format': 'bestvideo[width<=1920]+bestaudio/best[width<=1920]',
-                        'merge-output-format': 'mp4',
-                        'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
-                            ser['path'],
-                            eps['seasonNumber'],
-                            ser['title'],
-                            eps['episodeNumber'],
-                            eps['title']
-                        )
-                    }
-                    ytdl_format_options = appendcookie(ytdl_format_options, cookies)
-                    youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
-                    client.rescanseries(ser['id'])
+    def ytsearch(self, ydl_opts, playlist):
+        try:
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+                result = ydl.extract_info(
+                    playlist,
+                    download=False
+                )
+        except Exception as e:
+            print(e)
+        else:
+            video_url = None
+            if 'entries' in result and len(result['entries']) > 0:
+                try:
+                    video_url = result['entries'][0].get('webpage_url')
+                except Exception as e:
+                    print(e)
+            else:
+                video_url = result.get('webpage_url')
+            if playlist == video_url:
+                return False, ''
+            if video_url is None:
+                print('')
+                return False, ''
+            else:
+                return True, video_url
+
+    def download(self, series, episodes):
+        for s, ser in enumerate(series):
+            for e, eps in enumerate(episodes):
+                if ser['id'] == eps['seriesId']:
+                    cookies = None
+                    url = ser['url']
+                    if 'cookies_file' in ser:
+                        cookies = ser['cookies_file']
+                    ydleps = self.ytdl_eps_search_opts(upperescape(eps['title']), cookies)
+                    found, dlurl = self.ytsearch(ydleps, url)
+                    if found:
+                        ytdl_format_options = {
+                            'format': self.ytdl_format,
+                            'merge-output-format': 'mp4',
+                            'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
+                                ser['path'],
+                                eps['seasonNumber'],
+                                ser['title'],
+                                eps['episodeNumber'],
+                                eps['title']
+                            )
+                        }
+                        ytdl_format_options = self.appendcookie(ytdl_format_options, cookies)
+                        if 'format' in ser:
+                            ytdl_format_options = self.customformat(ytdl_format_options, ser['format'])
+                        youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
+                        self.rescanseries(ser['id'])
 
 
 def main():
     client = SonarrYTDL()
     series = client.filterseries()
     episodes = client.getseriesepisodes(series)
-    download(series, episodes, client)
+    client.download(series, episodes)
     print('Waiting...')
 
 
