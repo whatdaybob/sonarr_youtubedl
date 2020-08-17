@@ -3,10 +3,20 @@ sonarr:
     port: 1234
     apikey: 12341234
     ssl: false
+ytdl:
+  # For information on format refer to https://github.com/ytdl-org/youtube-dl#format-selection
+    default_format: bestvideo[width<=1920]+bestaudio/best[width<=1920]
 series:
   # Standard channel to check
   - title: Smarter Every Day
     url: https://www.youtube.com/channel/UC6107grRI4m0o2-emgoDnAA
+  # Example using cookies file and custom format
+  # For information on cookies refer to https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl
+  # For information on format refer to https://github.com/ytdl-org/youtube-dl#format-selection
+  - title: The Slow Mo Guys
+    url: https://www.youtube.com/channel/UCUK0HBIBWgM2c4vsPhkYY4w
+    cookies_file: youtube_cookies.txt # located in the same config folder
+    format: bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best
   # Youtube playlist of latest season with time offset, useful for member videos having early release
   - title: CHUMP
     url: https://www.youtube.com/playlist?list=PLUBVPK8x-XMiVzV098TtYq55awkA2XmXm
