@@ -81,7 +81,8 @@ On first run the docker will create a template file in the config folder.
 
 ```yaml
 sonarrytdl:
-    scan_interval: 1 # Minutes between scan
+    scan_interval: 1 # minutes between scans
+    debug: False # Set to True for a more verbose output
 sonarr:
     host: 192.168.1.123
     port: 1234
@@ -104,9 +105,13 @@ series:
   # Youtube playlist of latest season with time offset, useful for member videos having early release
   - title: CHUMP
     url: https://www.youtube.com/playlist?list=PLUBVPK8x-XMiVzV098TtYq55awkA2XmXm
-    offset:
+    offset: 
       days: 2
       hours: 3
+    regex:
+      sonarr:
+        match: '.-.#[0-9]*$'
+        replace: ''
 ```
 
 copy the `config.yml.template` to a new file called `config.yml` and edit accordingly.

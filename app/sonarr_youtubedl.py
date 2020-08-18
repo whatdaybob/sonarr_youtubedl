@@ -43,7 +43,12 @@ class SonarrYTDL(object):
         self.series = cfg["series"]
         self.ytdl_format = cfg['ytdl']['default_format']
         self.set_scan_interval(cfg['sonarrytdl']['scan_interval'])
-
+        try:
+            self.debug = bool(cfg['sonarrytdl']['debug'])
+            print('DEBUGGING ENABLED')
+        except AttributeError:
+            self.debug = False
+        
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series"""
         args = {'seriesId': series_id}
@@ -190,10 +195,25 @@ class SonarrYTDL(object):
         return needed
 
     def appendcookie(self, ytdlopts, cookies=None):
+        """Checks if specified cookie file exists in config
+        - ``ytdlopts``: Youtube-dl options to append cookie to
+        - ``cookies``: filename of cookie file to append to Youtube-dl opts 
+        returns:
+            ytdlopts
+                original if problem with cookies file
+                updated with cookies value if cookies file exists
+        """
         if cookies is not None:
-            ytdlopts.update({
-                'cookie': CONFIGPATH + cookies
-            })
+            cookie_path = os.path.abspath(CONFIGPATH + cookies)
+            cookie_exists = os.path.exists(cookie_path)
+            if cookie_exists is True:
+                ytdlopts.update({
+                    'cookie': cookie_path
+                })
+                if self.debug is True:
+                    print('  Cookies file used: {}'.format(cookie_path))
+            if cookie_exists is False:
+                print('  cookie files specified but doesn''t exist.')
             return ytdlopts
         else:
             return ytdlopts
@@ -214,7 +234,11 @@ class SonarrYTDL(object):
             'matchtitle': regextitle,
             'quiet': True,
         }
+        if self.debug is True:
+            ytdlopts.update({'quiet': False})
         ytdlopts = self.appendcookie(ytdlopts, cookies)
+        if self.debug is True:
+            print(ytdlopts)
         return ytdlopts
 
     def ytsearch(self, ydl_opts, playlist):
@@ -259,6 +283,7 @@ class SonarrYTDL(object):
                         print("", "{}: Found - {}:".format(e + 1, eps['title']), sep="  ")
                         ytdl_format_options = {
                             'format': self.ytdl_format,
+                            'quiet': True,
                             'merge-output-format': 'mp4',
                             'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
                                 ser['path'],
@@ -271,8 +296,17 @@ class SonarrYTDL(object):
                         ytdl_format_options = self.appendcookie(ytdl_format_options, cookies)
                         if 'format' in ser:
                             ytdl_format_options = self.customformat(ytdl_format_options, ser['format'])
-                        youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
-                        self.rescanseries(ser['id'])
+                        if self.debug is True:
+                            ytdl_format_options.update({'quiet': False})
+                            print(ytdl_format_options)
+                        try:
+                            youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
+                            self.rescanseries(ser['id'])
+                            print("","",  "Downloaded - {}".format(eps['title']), sep="  ")
+                        except Exception:
+                            print("","", "Failed - {}".format(eps['title']), sep="  ")
+                            
+
                     else:
                         print("", "{}: Missing - {}:".format(e + 1, eps['title']), sep="  ")
 
