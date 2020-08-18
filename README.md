@@ -15,7 +15,6 @@
 * Imports directly to Sonarr and it can then update your plex as and example
 * Allows setting time offsets to handle prerelease series
 * Can pass cookies.txt to handle site logins
-<!-- * Embeds relevant metadata into each trailer -->
 
 ## How do I use it
 
@@ -81,6 +80,8 @@ services:
 On first run the docker will create a template file in the config folder.
 
 ```yaml
+sonarrytdl:
+    scan_interval: 1 # Minutes between scan
 sonarr:
     host: 192.168.1.123
     port: 1234

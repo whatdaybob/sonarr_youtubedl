@@ -12,6 +12,7 @@ date_format = "%Y-%m-%dT%H:%M:%SZ"
 now = datetime.now()
 CONFIGFILE = os.environ['CONFIGPATH']
 CONFIGPATH = CONFIGFILE.replace('config.yml', '')
+SCANINTERVAL = 60
 
 
 class SonarrYTDL(object):
@@ -20,7 +21,6 @@ class SonarrYTDL(object):
         """Set up app with config"""
         checkconfig()
         with open(
-            # "/config/config.yml",
             CONFIGFILE,
             "r"
         ) as ymlfile:
@@ -41,6 +41,7 @@ class SonarrYTDL(object):
         self.api_key = cfg['sonarr']['apikey']
         self.series = cfg["series"]
         self.ytdl_format = cfg['ytdl']['default_format']
+        self.set_scan_interval(cfg['sonarrytdl']['scan_interval'])
 
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series"""
@@ -143,7 +144,6 @@ class SonarrYTDL(object):
     def getseriesepisodes(self, series):
         needed = []
         for ser in series[:]:
-            count = 0
             episodes = self.get_episodes_by_series_id(ser['id'])
             for eps in episodes[:]:
                 eps_date = now
@@ -158,12 +158,6 @@ class SonarrYTDL(object):
                 elif eps_date > now:
                     episodes.remove(eps)
                 else:
-                    count += 1
-                    print('{0}: {1} - {2}'.format(
-                        count,
-                        ser['title'],
-                        eps['title']
-                    ))
                     needed.append(eps)
                     continue
             if len(episodes) == 0:
@@ -174,6 +168,12 @@ class SonarrYTDL(object):
                     ser['title'],
                     len(episodes)
                 ))
+                for i, e in enumerate(episodes):
+                    print('  {0}: {1} - {2}'.format(
+                        i + 1,
+                        ser['title'],
+                        e['title']
+                    ))
         return needed
 
     def appendcookie(self, ytdlopts, cookies=None):
@@ -231,7 +231,9 @@ class SonarrYTDL(object):
                 return True, video_url
 
     def download(self, series, episodes):
+        print("", "Processing Wanted Downloads", sep="\n")
         for s, ser in enumerate(series):
+            print("{}:".format(ser['title']))
             for e, eps in enumerate(episodes):
                 if ser['id'] == eps['seriesId']:
                     cookies = None
@@ -241,6 +243,7 @@ class SonarrYTDL(object):
                     ydleps = self.ytdl_eps_search_opts(upperescape(eps['title']), cookies)
                     found, dlurl = self.ytsearch(ydleps, url)
                     if found:
+                        print("", "{}: Found - {}:".format(e + 1, eps['title']), sep="  ")
                         ytdl_format_options = {
                             'format': self.ytdl_format,
                             'merge-output-format': 'mp4',
@@ -257,6 +260,17 @@ class SonarrYTDL(object):
                             ytdl_format_options = self.customformat(ytdl_format_options, ser['format'])
                         youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
                         self.rescanseries(ser['id'])
+                    else:
+                        print("", "{}: Missing - {}:".format(e + 1, eps['title']), sep="  ")
+
+    def set_scan_interval(self, interval):
+        global SCANINTERVAL
+        if interval != SCANINTERVAL:
+            SCANINTERVAL = interval
+            print('Scan interval set to every {} minutes by config.yml'.format(interval))
+        else:
+            print('Default scan interval of every {} minutes in use'.format(interval))
+        return
 
 
 def main():
@@ -269,7 +283,7 @@ def main():
 
 print('Initial run')
 main()
-schedule.every(5).minutes.do(main)
+schedule.every(int(SCANINTERVAL)).minutes.do(main)
 
 while True:
     schedule.run_pending()
