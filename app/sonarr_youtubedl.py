@@ -3,6 +3,7 @@ import requests
 import urllib.parse
 import youtube_dl
 import os
+import re
 from utils import upperescape, checkconfig, offsethandler
 from datetime import datetime
 import schedule
@@ -127,6 +128,14 @@ class SonarrYTDL(object):
         for ser in series[:]:
             for wnt in self.series:
                 if wnt['title'] == ser['title']:
+                    if 'regex' in wnt:
+                        regex = wnt['regex']
+                        if 'sonarr' in regex:
+                            ser['sonarr_regex_match'] = regex['sonarr']['match']
+                            ser['sonarr_regex_replace'] = regex['sonarr']['replace']
+                        if 'site' in regex:
+                            ser['site_regex_match'] = regex['site']['match']
+                            ser['site_regex_replace'] = regex['site']['replace']
                     if 'offset' in wnt:
                         ser['offset'] = wnt['offset']
                     if 'cookies_file' in wnt:
@@ -158,6 +167,10 @@ class SonarrYTDL(object):
                 elif eps_date > now:
                     episodes.remove(eps)
                 else:
+                    if 'sonarr_regex_match' in ser:
+                        match = ser['sonarr_regex_match']
+                        replace = ser['sonarr_regex_replace']
+                        eps['title'] = re.sub(match, replace, eps['title'])
                     needed.append(eps)
                     continue
             if len(episodes) == 0:

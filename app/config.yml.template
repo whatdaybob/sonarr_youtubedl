@@ -25,3 +25,7 @@ series:
     offset: 
       days: 2
       hours: 3
+    regex:
+      sonarr:
+        match: '.-.#[0-9]*$'
+        replace: ''
