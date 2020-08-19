@@ -15,12 +15,13 @@ RUN \
 	useradd -u 911 -U -d /config -s /bin/false abc && \
 	usermod -G users abc && \
 # create some files / folders
-	mkdir -p /config /app /sonarr_root && \
+	mkdir -p /config /app /sonarr_root /logs && \
 	touch /var/lock/sonarr_youtube.lock
 
 # add volumes
 VOLUME /config
 VOLUME /sonarr_root
+VOLUME /logs
 
 # add local files
 COPY app/ /app

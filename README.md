@@ -50,6 +50,7 @@ docker create \
   --name=sonarr_youtubedl \
   -v /path/to/data:/config \
   -v /path/to/sonarrmedia:/sonarr_root \
+  -v /path/to/logs:/logs \
   --restart unless-stopped \
   whatdaybob/sonarr_youtubedl
 ```
@@ -66,6 +67,7 @@ services:
     volumes:
       - /path/to/data:/config
       - /path/to/sonarrmedia:/sonarr_root
+      - /path/to/logs:/logs
 ```
 
 ### Docker volumes
@@ -74,6 +76,7 @@ services:
 | :----: | --- |
 | `-v /config` | sonarr_youtubedl configs |
 | `-v /sonarr_root` | Library location from Sonarr container |
+| `-v /logs` | Library location from Sonarr container |
 
 ## Configuration file
 
@@ -105,7 +108,7 @@ series:
   # Youtube playlist of latest season with time offset, useful for member videos having early release
   - title: CHUMP
     url: https://www.youtube.com/playlist?list=PLUBVPK8x-XMiVzV098TtYq55awkA2XmXm
-    offset: 
+    offset:
       days: 2
       hours: 3
     regex:

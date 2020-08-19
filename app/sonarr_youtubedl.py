@@ -4,28 +4,15 @@ import youtube_dl
 import os
 import sys
 import re
-from utils import upperescape, checkconfig, offsethandler, YoutubeDLLogger, ytdl_hooks, ytdl_hooks_debug
+from utils import upperescape, checkconfig, offsethandler, YoutubeDLLogger, ytdl_hooks, ytdl_hooks_debug, setup_logging
 from datetime import datetime
 import schedule
 import time
 import logging
 
+
 # setup logger
-logger = logging.getLogger('sonarr_youtubedl')
-logger.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# setup logfile
-loggerfile = logging.FileHandler('sonarr_youtubedl.log')
-loggerfile.setLevel(logging.INFO)
-loggerfile.setFormatter(formatter)
-logger.addHandler(loggerfile)
-
-# setup console log
-loggerconsole = logging.StreamHandler()
-loggerconsole.setLevel(logging.INFO)
-loggerconsole.setFormatter(formatter)
-logger.addHandler(loggerconsole)
+logger = setup_logging()
 
 date_format = "%Y-%m-%dT%H:%M:%SZ"
 now = datetime.now()
@@ -49,8 +36,11 @@ class SonarrYTDL(object):
                 self.debug = cfg['sonarrytdl']['debug'] in ['true', 'True']
                 if self.debug:
                     logger.setLevel(logging.DEBUG)
-                    loggerconsole.setLevel(logging.DEBUG)
-                    loggerfile.setLevel(logging.DEBUG)
+                    for logs in logger.handlers:
+                        if logs.name == 'FileHandler':
+                            logs.setLevel(logging.DEBUG)
+                        if logs.name == 'StreamHandler':
+                            logs.setLevel(logging.DEBUG)
                     logger.debug('DEBUGGING ENABLED')
             except AttributeError:
                 self.debug = False
@@ -85,6 +75,7 @@ class SonarrYTDL(object):
 
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series"""
+        logger.debug('Begin call Sonarr for all episodes for series_id: {}'.format(series_id))
         args = {'seriesId': series_id}
         res = self.request_get("{}/api/episode".format(
             self.base_url),
@@ -102,6 +93,7 @@ class SonarrYTDL(object):
 
     def get_series(self):
         """Return all series in your collection"""
+        logger.debug('Begin call Sonarr for all available series')
         res = self.request_get("{}/api/series".format(
             self.base_url
         ))
@@ -109,6 +101,7 @@ class SonarrYTDL(object):
 
     def get_series_by_series_id(self, series_id):
         """Return the series with the matching ID or 404 if no matching series is found"""
+        logger.debug('Begin call Sonarr for specific series series_id: {}'.format(series_id))
         res = self.request_get("{}/api/series/{}".format(
             self.base_url,
             series_id
@@ -117,10 +110,12 @@ class SonarrYTDL(object):
 
     def request_get(self, url, params=None):
         """Wrapper on the requests.get"""
+        logger.debug('Begin GET with url: {}'.format(url))
         args = {
             "apikey": self.api_key
         }
         if params is not None:
+            logger.debug('Begin GET with params: {}'.format(params))
             args.update(params)
         url = "{}?{}".format(
             url,
@@ -130,6 +125,7 @@ class SonarrYTDL(object):
         return res
 
     def request_put(self, url, params=None, jsondata=None):
+        logger.debug('Begin PUT with url: {}'.format(url))
         """Wrapper on the requests.put"""
         headers = {
             'Content-Type': 'application/json',
@@ -139,6 +135,7 @@ class SonarrYTDL(object):
         )
         if params is not None:
             args.update(params)
+            logger.debug('Begin PUT with params: {}'.format(params))
         res = requests.post(
             url,
             headers=headers,
@@ -149,6 +146,7 @@ class SonarrYTDL(object):
 
     def rescanseries(self, series_id):
         """Refresh series information from trakt and rescan disk"""
+        logger.debug('Begin call Sonarr to rescan for series_id: {}'.format(series_id))
         data = {
             "name": "RescanSeries",
             "seriesId": str(series_id)
@@ -384,10 +382,10 @@ def main():
     logger.info('Waiting...')
 
 
-logger.info('Initial run')
-main()
-schedule.every(int(SCANINTERVAL)).minutes.do(main)
-
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+if __name__ == "__main__":
+    logger.info('Initial run')
+    main()
+    schedule.every(int(SCANINTERVAL)).minutes.do(main)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
