@@ -1,16 +1,35 @@
-import yaml
 import requests
 import urllib.parse
 import youtube_dl
 import os
+import sys
 import re
-from utils import upperescape, checkconfig, offsethandler
+from utils import upperescape, checkconfig, offsethandler, YoutubeDLLogger, ytdl_hooks, ytdl_hooks_debug
 from datetime import datetime
 import schedule
 import time
+import logging
+
+# setup logger
+logger = logging.getLogger('sonarr_youtubedl')
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# setup logfile
+loggerfile = logging.FileHandler('sonarr_youtubedl.log')
+loggerfile.setLevel(logging.INFO)
+loggerfile.setFormatter(formatter)
+logger.addHandler(loggerfile)
+
+# setup console log
+loggerconsole = logging.StreamHandler()
+loggerconsole.setLevel(logging.INFO)
+loggerconsole.setFormatter(formatter)
+logger.addHandler(loggerconsole)
 
 date_format = "%Y-%m-%dT%H:%M:%SZ"
 now = datetime.now()
+
 CONFIGFILE = os.environ['CONFIGPATH']
 CONFIGPATH = CONFIGFILE.replace('config.yml', '')
 SCANINTERVAL = 60
@@ -19,36 +38,51 @@ SCANINTERVAL = 60
 class SonarrYTDL(object):
 
     def __init__(self):
-        """Set up app with config"""
-        checkconfig()
-        with open(
-            CONFIGFILE,
-            "r"
-        ) as ymlfile:
-            cfg = yaml.load(
-                ymlfile,
-                Loader=yaml.BaseLoader
-            )
-        self.ipaddr = cfg['sonarr']['host']
-        self.port = str(cfg['sonarr']['port'])
-        scheme = "http"
-        if cfg['sonarr']['ssl']:
-            scheme == "https"
-        self.base_url = "{0}://{1}:{2}".format(
-            scheme,
-            self.ipaddr,
-            self.port
-        )
-        self.api_key = cfg['sonarr']['apikey']
-        self.series = cfg["series"]
-        self.ytdl_format = cfg['ytdl']['default_format']
-        self.set_scan_interval(cfg['sonarrytdl']['scan_interval'])
+        """Set up app with config file settings"""
+        cfg = checkconfig()
+
+        # Sonarr_YTDL Setup
+
         try:
-            self.debug = bool(cfg['sonarrytdl']['debug'])
-            print('DEBUGGING ENABLED')
-        except AttributeError:
-            self.debug = False
-        
+            self.set_scan_interval(cfg['sonarrytdl']['scan_interval'])
+            try:
+                self.debug = cfg['sonarrytdl']['debug'] in ['true', 'True']
+                if self.debug:
+                    logger.setLevel(logging.DEBUG)
+                    loggerconsole.setLevel(logging.DEBUG)
+                    loggerfile.setLevel(logging.DEBUG)
+                    logger.debug('DEBUGGING ENABLED')
+            except AttributeError:
+                self.debug = False
+        except Exception:
+            sys.exit("Error with sonarrytdl config.yml values.")
+
+        # Sonarr Setup
+        try:
+            scheme = "http"
+            if cfg['sonarr']['ssl']:
+                scheme == "https"
+            self.base_url = "{0}://{1}:{2}".format(
+                scheme,
+                cfg['sonarr']['host'],
+                str(cfg['sonarr']['port'])
+            )
+            self.api_key = cfg['sonarr']['apikey']
+        except Exception:
+            sys.exit("Error with sonarr config.yml values.")
+
+        # YTDL Setup
+        try:
+            self.ytdl_format = cfg['ytdl']['default_format']
+        except Exception:
+            sys.exit("Error with ytdl config.yml values.")
+
+        # YTDL Setup
+        try:
+            self.series = cfg["series"]
+        except Exception:
+            sys.exit("Error with series config.yml values.")
+
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series"""
         args = {'seriesId': series_id}
@@ -151,7 +185,7 @@ class SonarrYTDL(object):
                     matched.append(ser)
         for check in matched:
             if not check['monitored']:
-                print('WARNING: {0} is not currently monitored'.format(ser['title']))
+                logger.warn('{0} is not currently monitored'.format(ser['title']))
         del series[:]
         return matched
 
@@ -179,15 +213,15 @@ class SonarrYTDL(object):
                     needed.append(eps)
                     continue
             if len(episodes) == 0:
-                print('{0} no episodes needed'.format(ser['title']))
+                logger.info('{0} no episodes needed'.format(ser['title']))
                 series.remove(ser)
             else:
-                print('{0} missing {1} episodes'.format(
+                logger.info('{0} missing {1} episodes'.format(
                     ser['title'],
                     len(episodes)
                 ))
                 for i, e in enumerate(episodes):
-                    print('  {0}: {1} - {2}'.format(
+                    logger.info('  {0}: {1} - {2}'.format(
                         i + 1,
                         ser['title'],
                         e['title']
@@ -197,7 +231,7 @@ class SonarrYTDL(object):
     def appendcookie(self, ytdlopts, cookies=None):
         """Checks if specified cookie file exists in config
         - ``ytdlopts``: Youtube-dl options to append cookie to
-        - ``cookies``: filename of cookie file to append to Youtube-dl opts 
+        - ``cookies``: filename of cookie file to append to Youtube-dl opts
         returns:
             ytdlopts
                 original if problem with cookies file
@@ -210,15 +244,23 @@ class SonarrYTDL(object):
                 ytdlopts.update({
                     'cookie': cookie_path
                 })
-                if self.debug is True:
-                    print('  Cookies file used: {}'.format(cookie_path))
+                # if self.debug is True:
+                logger.debug('  Cookies file used: {}'.format(cookie_path))
             if cookie_exists is False:
-                print('  cookie files specified but doesn''t exist.')
+                logger.warn('  cookie files specified but doesn''t exist.')
             return ytdlopts
         else:
             return ytdlopts
 
     def customformat(self, ytdlopts, customformat=None):
+        """Checks if specified cookie file exists in config
+        - ``ytdlopts``: Youtube-dl options to change the ytdl format for
+        - ``customformat``: format to download
+        returns:
+            ytdlopts
+                original: if no custom format
+                updated: with new format value if customformat exists
+        """
         if customformat is not None:
             ytdlopts.update({
                 'format': customformat
@@ -233,12 +275,18 @@ class SonarrYTDL(object):
             'playlistreverse': True,
             'matchtitle': regextitle,
             'quiet': True,
+
         }
         if self.debug is True:
-            ytdlopts.update({'quiet': False})
+            ytdlopts.update({
+                'quiet': False,
+                'logger': YoutubeDLLogger(),
+                'progress_hooks': [ytdl_hooks],
+            })
         ytdlopts = self.appendcookie(ytdlopts, cookies)
         if self.debug is True:
-            print(ytdlopts)
+            logger.debug('Youtube-DL opts used for episode matching')
+            logger.debug(ytdlopts)
         return ytdlopts
 
     def ytsearch(self, ydl_opts, playlist):
@@ -249,74 +297,82 @@ class SonarrYTDL(object):
                     download=False
                 )
         except Exception as e:
-            print(e)
+            logger.error(e)
         else:
             video_url = None
             if 'entries' in result and len(result['entries']) > 0:
                 try:
                     video_url = result['entries'][0].get('webpage_url')
                 except Exception as e:
-                    print(e)
+                    logger.error(e)
             else:
                 video_url = result.get('webpage_url')
             if playlist == video_url:
                 return False, ''
             if video_url is None:
-                print('')
+                logger.error('No video_url')
                 return False, ''
             else:
                 return True, video_url
 
     def download(self, series, episodes):
-        print("", "Processing Wanted Downloads", sep="\n")
-        for s, ser in enumerate(series):
-            print("{}:".format(ser['title']))
-            for e, eps in enumerate(episodes):
-                if ser['id'] == eps['seriesId']:
-                    cookies = None
-                    url = ser['url']
-                    if 'cookies_file' in ser:
-                        cookies = ser['cookies_file']
-                    ydleps = self.ytdl_eps_search_opts(upperescape(eps['title']), cookies)
-                    found, dlurl = self.ytsearch(ydleps, url)
-                    if found:
-                        print("", "{}: Found - {}:".format(e + 1, eps['title']), sep="  ")
-                        ytdl_format_options = {
-                            'format': self.ytdl_format,
-                            'quiet': True,
-                            'merge-output-format': 'mp4',
-                            'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
-                                ser['path'],
-                                eps['seasonNumber'],
-                                ser['title'],
-                                eps['episodeNumber'],
-                                eps['title']
-                            )
-                        }
-                        ytdl_format_options = self.appendcookie(ytdl_format_options, cookies)
-                        if 'format' in ser:
-                            ytdl_format_options = self.customformat(ytdl_format_options, ser['format'])
-                        if self.debug is True:
-                            ytdl_format_options.update({'quiet': False})
-                            print(ytdl_format_options)
-                        try:
-                            youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
-                            self.rescanseries(ser['id'])
-                            print("","",  "Downloaded - {}".format(eps['title']), sep="  ")
-                        except Exception:
-                            print("","", "Failed - {}".format(eps['title']), sep="  ")
-                            
-
-                    else:
-                        print("", "{}: Missing - {}:".format(e + 1, eps['title']), sep="  ")
+        if len(series) != 0:
+            logger.info("Processing Wanted Downloads")
+            for s, ser in enumerate(series):
+                logger.info("  {}:".format(ser['title']))
+                for e, eps in enumerate(episodes):
+                    if ser['id'] == eps['seriesId']:
+                        cookies = None
+                        url = ser['url']
+                        if 'cookies_file' in ser:
+                            cookies = ser['cookies_file']
+                        ydleps = self.ytdl_eps_search_opts(upperescape(eps['title']), cookies)
+                        found, dlurl = self.ytsearch(ydleps, url)
+                        if found:
+                            logger.info("    {}: Found - {}:".format(e + 1, eps['title']))
+                            ytdl_format_options = {
+                                'format': self.ytdl_format,
+                                'quiet': True,
+                                'merge-output-format': 'mp4',
+                                'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
+                                    ser['path'],
+                                    eps['seasonNumber'],
+                                    ser['title'],
+                                    eps['episodeNumber'],
+                                    eps['title']
+                                ),
+                                'progress_hooks': [ytdl_hooks],
+                                'noplaylist': True,
+                            }
+                            ytdl_format_options = self.appendcookie(ytdl_format_options, cookies)
+                            if 'format' in ser:
+                                ytdl_format_options = self.customformat(ytdl_format_options, ser['format'])
+                            if self.debug is True:
+                                ytdl_format_options.update({
+                                    'quiet': False,
+                                    'logger': YoutubeDLLogger(),
+                                    'progress_hooks': [ytdl_hooks_debug],
+                                })
+                                logger.debug('Youtube-DL opts used for downloading')
+                                logger.debug(ytdl_format_options)
+                            try:
+                                youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
+                                self.rescanseries(ser['id'])
+                                logger.info("      Downloaded - {}".format(eps['title']))
+                            except Exception as e:
+                                logger.error("      Failed - {} - {}".format(eps['title'], e))
+                        else:
+                            logger.info("    {}: Missing - {}:".format(e + 1, eps['title']))
+        else:
+            logger.info("Nothing to process")
 
     def set_scan_interval(self, interval):
         global SCANINTERVAL
         if interval != SCANINTERVAL:
             SCANINTERVAL = interval
-            print('Scan interval set to every {} minutes by config.yml'.format(interval))
+            logger.info('Scan interval set to every {} minutes by config.yml'.format(interval))
         else:
-            print('Default scan interval of every {} minutes in use'.format(interval))
+            logger.info('Default scan interval of every {} minutes in use'.format(interval))
         return
 
 
@@ -325,10 +381,10 @@ def main():
     series = client.filterseries()
     episodes = client.getseriesepisodes(series)
     client.download(series, episodes)
-    print('Waiting...')
+    logger.info('Waiting...')
 
 
-print('Initial run')
+logger.info('Initial run')
 main()
 schedule.every(int(SCANINTERVAL)).minutes.do(main)
 
