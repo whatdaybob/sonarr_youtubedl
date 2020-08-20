@@ -4,6 +4,8 @@ import sys
 import datetime
 import yaml
 import logging
+from logging.handlers import RotatingFileHandler
+
 
 CONFIGFILE = os.environ['CONFIGPATH']
 # CONFIGPATH = CONFIGFILE.replace('config.yml', '')
@@ -122,7 +124,11 @@ def setup_logging(lf_enabled=True, lc_enabled=True):
         # setup logfile
         log_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'logs'))
         log_file = os.path.abspath(log_file + '/sonarr_youtubedl.log')
-        loggerfile = logging.FileHandler(log_file)
+        loggerfile = RotatingFileHandler(
+            log_file,
+            maxBytes=5000000,
+            backupCount=5
+        )
         loggerfile.setLevel(logging.INFO)
         loggerfile.set_name('FileHandler')
         loggerfile.setFormatter(log_format)
