@@ -1,4 +1,6 @@
 requests==2.24.0
-youtube-dl==2020.7.28
+youtube-dl==2020.11.26
 pyyaml==5.3.1
 schedule==0.6.0
+flake8==3.8.4
+black==20.8b1

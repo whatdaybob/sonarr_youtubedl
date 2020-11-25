@@ -4,7 +4,7 @@ import youtube_dl
 import os
 import sys
 import re
-from utils import upperescape, checkconfig, offsethandler, YoutubeDLLogger, ytdl_hooks, ytdl_hooks_debug, setup_logging
+from utils import upperescape, checkconfig, offsethandler, YoutubeDLLogger, ytdl_hooks, ytdl_hooks_debug, setup_logging  # NOQA
 from datetime import datetime
 import schedule
 import time
@@ -245,7 +245,7 @@ class SonarrYTDL(object):
                 # if self.debug is True:
                 logger.debug('  Cookies file used: {}'.format(cookie_path))
             if cookie_exists is False:
-                logger.warn('  cookie files specified but doesn''t exist.')
+                logger.warning('  cookie files specified but doesn''t exist.')
             return ytdlopts
         else:
             return ytdlopts

@@ -1,0 +1,27 @@
+{
+	"name": "sonarr_youtubedl",
+	"context": "..",
+	"dockerFile": "..\\Dockerfile",
+	"settings": { 
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"python.pythonPath": "/usr/local/bin/python",
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": false,
+		"python.linting.flake8Enabled": true,
+		"python.linting.flake8Path": "/usr/local/bin/flake8",
+		"cornflakes.linter.executablePath": "/usr/local/bin/flake8"
+	},
+	"extensions": [
+		"ms-python.python",
+		"kevinglasson.cornflakes-linter"
+	],
+	"containerEnv": {
+		"CONFIGPATH": "/config/config.yml"
+	},
+	"mounts": [
+		"source=${localWorkspaceFolder}/config/config.yml,target=/config/config.yml,type=bind",
+		"source=${localWorkspaceFolder}/config/youtube_cookies.txt,target=/config/youtube_cookies.txt,type=bind",
+		"source=${localWorkspaceFolder}/app/sonarr_root/,target=/sonarr_root/,type=bind"
+
+	]
+}
