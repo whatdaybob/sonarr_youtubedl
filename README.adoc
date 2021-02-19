@@ -29,11 +29,6 @@ Lastly be aware that this requires the TVDB to match exactly what the episodes t
 
 The architectures supported by this image are:
 
-| Architecture | Tag |
-| :----: | --- |
-| x86-64 | latest |
-| x86-64 | dev |
-
 [Attributes]
 |===
 |Architecture|Tag
