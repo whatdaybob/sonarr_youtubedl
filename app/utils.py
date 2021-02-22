@@ -31,7 +31,9 @@ def upperescape(string):
     # Make punctuation optional for human error
     string = string.replace("'","([']?)")
     string = string.replace(",","([,]?)")
+    string = string.replace("!","([!]?)")
     string = string.replace("\\.","([\\.]?)")
+    string = string.replace("\\?","([\\?]?)")
     string = string.replace(":","([:]?)")
     return string
 
