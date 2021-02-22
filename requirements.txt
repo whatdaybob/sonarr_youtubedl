@@ -1,6 +1,6 @@
-requests==2.24.0
-youtube-dl==2021.01.24.1
-pyyaml==5.3.1
-schedule==0.6.0
+requests==2.25.1
+youtube_dl==2021.2.10
+pyyaml==5.4.1
+schedule==1.0.0
 flake8==3.8.4
 black==20.8b1
