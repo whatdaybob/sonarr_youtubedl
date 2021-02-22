@@ -94,7 +94,7 @@ On first run the docker will create a template file in the config folder.
 
 [source,yaml]
 ----
-include::./config/config.yml.template[]
+include::./app/config.yml.template[]
 ----
 
 copy the `config.yml.template` to a new file called `config.yml` and edit accordingly.
