@@ -29,12 +29,13 @@ def upperescape(string):
     # Make it look for and as whole or ampersands
     string = string.replace('\\ AND\\ ','\\ (AND|&)\\ ')
     # Make punctuation optional for human error
-    string = string.replace("'","([']?)")
-    string = string.replace(",","([,]?)")
-    string = string.replace("!","([!]?)")
-    string = string.replace("\\.","([\\.]?)")
-    string = string.replace("\\?","([\\?]?)")
-    string = string.replace(":","([:]?)")
+    string = string.replace("'","([']?)") # optional apostrophe
+    string = string.replace(",","([,]?)") # optional comma
+    string = string.replace("!","([!]?)") # optional question mark
+    string = string.replace("\\.","([\\.]?)") # optional period
+    string = string.replace("\\?","([\\?]?)") # optional question mark
+    string = string.replace(":","([:]?)") # optional colon
+    string = re.sub("S\\\\", "([']?)"+"S\\\\", string) # optional belonging apostrophe (has to be last due to question mark)
     return string
 
 
