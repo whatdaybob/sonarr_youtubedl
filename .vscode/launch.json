@@ -2,10 +2,10 @@
    "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Devcontainer: Launch sonarr_youtubedl",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "app/sonarr_youtubedl.py",
             "console": "integratedTerminal"
         }
     ]
