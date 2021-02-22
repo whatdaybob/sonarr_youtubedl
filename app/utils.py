@@ -18,8 +18,21 @@ def upperescape(string):
     returns:
         ``string``: str new string
     """
-    string = string.upper()
+    # UPPERCASE as YTDL is case insensitive for ease.
+    string = string.upper() 
+    # Remove quote characters as YTDL converts these.
+    string = string.replace('’',"'") 
+    string = string.replace('“','"')
+    string = string.replace('”','"')
+    # Escape the characters
     string = re.escape(string)
+    # Make it look for and as whole or ampersands
+    string = string.replace('\\ AND\\ ','\\ (AND|&)\\ ')
+    # Make punctuation optional for human error
+    string = string.replace("'","([']?)")
+    string = string.replace(",","([,]?)")
+    string = string.replace("\\.","([\\.]?)")
+    string = string.replace(":","([:]?)")
     return string
 
 
