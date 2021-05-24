@@ -1,5 +1,5 @@
 requests==2.25.1
-youtube_dl==2021.4.26
+youtube_dl==2021.5.16
 pyyaml==5.4.1
 schedule==1.0.0
 flake8==3.8.4
