@@ -255,7 +255,7 @@ class SonarrYTDL(object):
             cookie_exists = os.path.exists(cookie_path)
             if cookie_exists is True:
                 ytdlopts.update({
-                    'cookie': cookie_path
+                    'cookiefile': cookie_path
                 })
                 # if self.debug is True:
                 logger.debug('  Cookies file used: {}'.format(cookie_path))
