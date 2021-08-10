@@ -129,11 +129,11 @@ def ytdl_hooks(d):
         file_tuple = os.path.split(os.path.abspath(d['filename']))
         logger.info("      Downloaded - {}".format(file_tuple[1]))
 
+def setup_logging(lf_enabled=True, lc_enabled=True, debugging=False):
 
-def setup_logging(lf_enabled=True, lc_enabled=True):
-
+    log_level = logging.DEBUG if debugging == True else log_level
     logger = logging.getLogger('sonarr_youtubedl')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(log_level)
     log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
     if lf_enabled:
@@ -145,7 +145,7 @@ def setup_logging(lf_enabled=True, lc_enabled=True):
             maxBytes=5000000,
             backupCount=5
         )
-        loggerfile.setLevel(logging.INFO)
+        loggerfile.setLevel(log_level)
         loggerfile.set_name('FileHandler')
         loggerfile.setFormatter(log_format)
         logger.addHandler(loggerfile)
@@ -153,7 +153,7 @@ def setup_logging(lf_enabled=True, lc_enabled=True):
     if lc_enabled:
         # setup console log
         loggerconsole = logging.StreamHandler()
-        loggerconsole.setLevel(logging.INFO)
+        loggerconsole.setLevel(log_level)
         loggerconsole.set_name('StreamHandler')
         loggerconsole.setFormatter(log_format)
         logger.addHandler(loggerconsole)
