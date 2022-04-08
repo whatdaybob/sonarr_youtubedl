@@ -9,10 +9,15 @@ from datetime import datetime
 import schedule
 import time
 import logging
+import argparse
 
+# allow debug arg for verbose logging
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+args = parser.parse_args()
 
 # setup logger
-logger = setup_logging()
+logger = setup_logging(True, True, args.debug)
 
 date_format = "%Y-%m-%dT%H:%M:%SZ"
 now = datetime.now()
@@ -255,7 +260,7 @@ class SonarrYTDL(object):
             cookie_exists = os.path.exists(cookie_path)
             if cookie_exists is True:
                 ytdlopts.update({
-                    'cookie': cookie_path
+                    'cookiefile': cookie_path
                 })
                 # if self.debug is True:
                 logger.debug('  Cookies file used: {}'.format(cookie_path))
