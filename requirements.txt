@@ -1,4 +1,4 @@
 requests==2.25.1
-youtube_dl==2021.6.6
+yt-dlp==2022.4.8
 pyyaml==5.4.1
 schedule==1.1.0
