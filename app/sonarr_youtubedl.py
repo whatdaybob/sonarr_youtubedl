@@ -203,7 +203,7 @@ class SonarrYTDL(object):
                     matched.append(ser)
         for check in matched:
             if not check['monitored']:
-                logger.warn('{0} is not currently monitored'.format(ser['title']))
+                logger.warning('{0} is not currently monitored'.format(ser['title']))
         del series[:]
         return matched
 

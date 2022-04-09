@@ -107,7 +107,7 @@ class YoutubeDLLogger(object):
         self.logger.debug(msg)
 
     def warning(self, msg: str) -> None:
-        self.logger.info(msg)
+        self.logger.warning(msg)
 
     def error(self, msg: str) -> None:
         self.logger.error(msg)
@@ -130,7 +130,7 @@ def ytdl_hooks(d):
         logger.info("      Downloaded - {}".format(file_tuple[1]))
 
 def setup_logging(lf_enabled=True, lc_enabled=True, debugging=False):
-
+    log_level = logging.INFO
     log_level = logging.DEBUG if debugging == True else log_level
     logger = logging.getLogger('sonarr_youtubedl')
     logger.setLevel(log_level)
@@ -139,6 +139,8 @@ def setup_logging(lf_enabled=True, lc_enabled=True, debugging=False):
     if lf_enabled:
         # setup logfile
         log_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'logs'))
+        if not os.path.exists(log_file):
+            os.makedirs(log_file)
         log_file = os.path.abspath(log_file + '/sonarr_youtubedl.log')
         loggerfile = RotatingFileHandler(
             log_file,
