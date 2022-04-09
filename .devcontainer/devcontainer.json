@@ -3,7 +3,12 @@
 	"context": "..",
 	"dockerFile": "..\\Dockerfile",
 	"settings": { 
-		"terminal.integrated.shell.linux": "/bin/bash",
+		"terminal.integrated.defaultProfile.linux": "bash",
+		"terminal.integrated.profiles.linux": {
+			"bash": {
+				"path": "/bin/bash"
+			}
+		},	
 		"python.pythonPath": "/usr/local/bin/python",
 		"python.linting.enabled": true,
 		"python.linting.pylintEnabled": false,
@@ -22,6 +27,5 @@
 		"source=${localWorkspaceFolder}/config/config.yml,target=/config/config.yml,type=bind",
 		"source=${localWorkspaceFolder}/config/youtube_cookies.txt,target=/config/youtube_cookies.txt,type=bind",
 		"source=${localWorkspaceFolder}/app/sonarr_root/,target=/sonarr_root/,type=bind"
-
 	]
 }
