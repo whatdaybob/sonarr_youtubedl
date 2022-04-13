@@ -57,4 +57,4 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8
-          tags: whatdaybob/sonarr_youtubedl:${{ steps.tag.outputs.tag }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/sonarr_youtubedl:${{ steps.tag.outputs.tag }}
