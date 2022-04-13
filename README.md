@@ -19,9 +19,12 @@
 ## How do I use it
 
 Firstly you need a series that is available online in the supported sites that YouTube-DL can grab from.
+
 Secondly you need to add this to Sonarr and monitor the episodes that you want.
+
 Thirdly edit your config.yml accordingly so that this knows where your Sonarr is, which series you are after and where to grab it from.
-Lastly be aware that this requires the TVDB to match exactly what the episodes titles are in the scan, generally this is ok but as it's an openly editable site sometime there can be differences.
+
+Lastly be aware that this requires the TVDB to match exactly what the episodes titles are in the scan, generally this is ok but as it's an openly editable site sometime there can be differences. You can use [regexes](#episode-title-regex-support) to bridge the gap between Sonarr and YouTube.
 
 ## Supported Architectures
 
@@ -87,6 +90,37 @@ A couple of people are not sure what is meant by the sonarr root. As this downlo
 On first run the docker will create a template file in the config folder. Example [config.yml.template](./app/config.yml.template)
 
 Copy the `config.yml.template` to a new file called `config.yml` and edit accordingly.
+
+### Episode title regex support
+
+When the episode titles in Sonarr and YouTube differ, you can specify regexes that will rewrite the Sonarr episode title to match those found on YouTube. The configuration per series is as follows:
+
+```yaml
+series:
+  - title: Example
+    url: https://www.youtube.com/playlist?list=example
+    regex:
+      sonarr:
+        - match: 'France'
+          replace: '(ep#1)'
+        - match: 'America'
+          replace: '(ep#2)'
+        - match: 'Mexico/India'
+          replace: '(ep#3)'
+```
+
+Each regex will be executed in sequence. The Sonarr episode title is the input for the first regex, and the output of each regex is used as the input for the next in the list.
+
+Enabling debugging can help with understanding how the regex is changing the titles. An example debug log shows this below.
+
+```log
+2022-04-13 22:47:23,576 - sonarr_youtubedl - DEBUG - Updating episode title "Who Smuggled a Comedians DOG? - #27" with regex ".-.#[0-9]*$" and replacement ""
+2022-04-13 22:47:23,583 - sonarr_youtubedl - DEBUG - New title "Who Smuggled a Comedians DOG?"
+```
+
+Using a site like [Regex101](https://regex101.com/) can help build regular expressions and help understand how they work if your not too familiar with them.
+
+### Thanks and feedback / collaboration is always welcome!
 
 If I helped in anyway and you would like to help me, consider donating a lovely beverage with the below.
 

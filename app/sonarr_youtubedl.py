@@ -237,8 +237,7 @@ class SonarrYTDL(object):
                     if 'regex' in wnt:
                         regex = wnt['regex']
                         if 'sonarr' in regex:
-                            ser['sonarr_regex_match'] = regex['sonarr']['match']
-                            ser['sonarr_regex_replace'] = regex['sonarr']['replace']
+                            ser['sonarr_regex'] = regex['sonarr']
                         if 'site' in regex:
                             ser['site_regex_match'] = regex['site']['match']
                             ser['site_regex_replace'] = regex['site']['replace']
@@ -292,10 +291,16 @@ class SonarrYTDL(object):
                 elif eps_date > now:
                     episodes.remove(eps)
                 else:
-                    if 'sonarr_regex_match' in ser:
-                        match = ser['sonarr_regex_match']
-                        replace = ser['sonarr_regex_replace']
-                        eps['title'] = re.sub(match, replace, eps['title'])
+                    if 'sonarr_regex' in ser:
+                        try:
+                            for regex in ser['sonarr_regex']:
+                                match = regex['match']
+                                replace = regex['replace']
+                                logger.debug('Updating episode title "{0}" with regex "{1}" and replacement "{2}"'.format(eps['title'], match, replace))
+                                eps['title'] = re.sub(match, replace, eps['title'])
+                                logger.debug('New title "{0}"'.format(eps['title']))
+                        except TypeError:
+                            logger.error('{0} has invalid settings for sonarr regex'.format(ser['title']))
                     needed.append(eps)
                     continue
             if len(episodes) == 0:
