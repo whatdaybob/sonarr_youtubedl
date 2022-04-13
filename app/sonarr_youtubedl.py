@@ -12,7 +12,7 @@ import logging
 import argparse
 
 # allow debug arg for verbose logging
-parser = argparse.ArgumentParser(description='Process some integers.')
+parser = argparse.ArgumentParser(description='Loads Configuration.')
 parser.add_argument('--debug', action='store_true', help='Enable debug logging')
 args = parser.parse_args()
 
@@ -30,11 +30,20 @@ SCANINTERVAL = 60
 class SonarrYTDL(object):
 
     def __init__(self):
-        """Set up app with config file settings"""
         cfg = checkconfig()
+        self.cfg_sonarrytdl(cfg)
+        self.cfg_sonarr(cfg)
+        self.cfg_series(cfg)
+        self.cfg_ytdl(cfg)
 
-        # Sonarr_YTDL Setup
+    def cfg_sonarrytdl(self, cfg):
+        """Loads main configuration
 
+        Args:
+            cfg (dict): Configuration File
+
+        """
+ 
         try:
             self.set_scan_interval(cfg['sonarrytdl']['scan_interval'])
             try:
@@ -52,7 +61,14 @@ class SonarrYTDL(object):
         except Exception:
             sys.exit("Error with sonarrytdl config.yml values.")
 
-        # Sonarr Setup
+    def cfg_sonarr(self, cfg):
+        """Loads Sonarr configuration
+
+        Args:
+            cfg (dict): Configuration File
+
+        """
+
         try:
             scheme = "http"
             if cfg['sonarr']['ssl']:
@@ -66,20 +82,42 @@ class SonarrYTDL(object):
         except Exception:
             sys.exit("Error with sonarr config.yml values.")
 
-        # YTDL Setup
+    def cfg_ytdl(self, cfg):
+        """Loads YTDL configuration
+
+        Args:
+            cfg (dict): Configuration File
+
+        """
+
         try:
             self.ytdl_format = cfg['ytdl']['default_format']
         except Exception:
             sys.exit("Error with ytdl config.yml values.")
 
-        # Series Setup
+    def cfg_series(self, cfg):
+        """Loads Series configuration
+
+        Args:
+            cfg (dict): Configuration File
+
+        """
+
         try:
             self.series = cfg["series"]
         except Exception:
             sys.exit("Error with series config.yml values.")
 
     def get_episodes_by_series_id(self, series_id):
-        """Returns all episodes for the given series"""
+        """Returns all episodes for the given series
+
+        Args:
+            series_id (int): Sonarr series id
+
+        Returns:
+            list: all episodes in the given series
+        """
+
         logger.debug('Begin call Sonarr for all episodes for series_id: {}'.format(series_id))
         args = {'seriesId': series_id}
         res = self.request_get("{}/api/episode".format(
@@ -88,30 +126,33 @@ class SonarrYTDL(object):
         )
         return res.json()
 
-    def get_episode_files_by_series_id(self, series_id):
-        """Returns all episode files for the given series"""
-        res = self.request_get("{}/api/episodefile?seriesId={}".format(
-            self.base_url,
-            series_id
-        ))
-        return res.json()
-
     def get_series(self):
-        """Return all series in your collection"""
+        """Return all series in your collection
+        
+        Returns:
+            list: shows available in sonarr 
+        """
         logger.debug('Begin call Sonarr for all available series')
         res = self.request_get("{}/api/series".format(
             self.base_url
         ))
         return res.json()
 
-    def get_series_by_series_id(self, series_id):
-        """Return the series with the matching ID or 404 if no matching series is found"""
-        logger.debug('Begin call Sonarr for specific series series_id: {}'.format(series_id))
-        res = self.request_get("{}/api/series/{}".format(
-            self.base_url,
-            series_id
-        ))
-        return res.json()
+    # def get_series_by_series_id(self, series_id):
+    #     """Return the series with the matching ID or 404 if no matching series is found
+
+    #     Args:
+    #         series_id (int): _description_
+
+    #     Returns:
+    #         _type_: _description_
+    #     """        
+    #     logger.debug('Begin call Sonarr for specific series series_id: {}'.format(series_id))
+    #     res = self.request_get("{}/api/series/{}".format(
+    #         self.base_url,
+    #         series_id
+    #     ))
+    #     return res.json()
 
     def request_get(self, url, params=None):
         """Wrapper on the requests.get"""
@@ -130,8 +171,17 @@ class SonarrYTDL(object):
         return res
 
     def request_put(self, url, params=None, jsondata=None):
+        """Wrapper on the requests.put
+
+        Args:
+            url (str): api that accepts put requests
+            params (str, optional): additional url parameters. Defaults to None.
+            jsondata (dict, optional): data to put to url. Defaults to None.
+
+        Returns:
+            Response: api response
+        """        
         logger.debug('Begin PUT with url: {}'.format(url))
-        """Wrapper on the requests.put"""
         headers = {
             'Content-Type': 'application/json',
         }
@@ -150,7 +200,15 @@ class SonarrYTDL(object):
         return res
 
     def rescanseries(self, series_id):
-        """Refresh series information from trakt and rescan disk"""
+        """Refresh series information from trakt and rescan disk
+
+        Args:
+            series_id (int): Sonarr series id
+
+        Returns:
+            _type_: _description_
+        """
+
         logger.debug('Begin call Sonarr to rescan for series_id: {}'.format(series_id))
         data = {
             "name": "RescanSeries",
@@ -164,7 +222,12 @@ class SonarrYTDL(object):
         return res.json()
 
     def filterseries(self):
-        """Return all series in Sonarr that are to be downloaded by youtube-dl"""
+        """Return all series in Sonarr that are to be downloaded by youtube-dl
+        
+        Returns:
+            dict: containing configuration values
+        """
+        
         series = self.get_series()
         matched = []
         for ser in series[:]:
@@ -208,6 +271,16 @@ class SonarrYTDL(object):
         return matched
 
     def getseriesepisodes(self, series):
+        """ Gets episodes for a series where they are in the configuration file and exists in sonarr. 
+            It only will get episodes that are monitored and dont have a file already.    
+
+        Args:
+            series (list): list of series to get episodes for
+
+        Returns:
+            list: missing monitored episodes episodes
+        """
+
         needed = []
         for ser in series[:]:
             episodes = self.get_episodes_by_series_id(ser['id'])
@@ -288,6 +361,17 @@ class SonarrYTDL(object):
             return ytdlopts
 
     def ytdl_eps_search_opts(self, regextitle, playlistreverse, cookies=None):
+        """Generates the Youtube DL options for searching a specific episode in a playlist
+
+        Args:
+            regextitle (str): Regex to use to match the episode name in youtube
+            playlistreverse (bool): Search playlist videos in reverse order
+            cookies (str, optional): cookie file location. Defaults to None.
+        
+        Returns:
+            dict: Youtube DL options
+        """
+
         ytdlopts = {
             'ignoreerrors': True,
             'playlistreverse': playlistreverse,
@@ -308,6 +392,17 @@ class SonarrYTDL(object):
         return ytdlopts
 
     def ytsearch(self, ydl_opts, playlist):
+        """Search a playlist, channel or direct link using youtube dl match title regex.
+
+        Args:
+            ydl_opts (dict): contains basic youtube dl options to search with
+            playlist (str): a youtube url to search
+
+        Returns:
+            (bool): True if found, False if not.
+            (str):  direct video url if found, empty string if not.
+        """
+
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 result = ydl.extract_info(
@@ -405,6 +500,11 @@ class SonarrYTDL(object):
             logger.info("Nothing to process")
 
     def set_scan_interval(self, interval):
+        """ Changes the SCANINTERVAL if it is different that the default 60 Minutes
+        Args:
+            interval (int): Minutes to set SCANINTERVAL to.
+        """
+
         global SCANINTERVAL
         if interval != SCANINTERVAL:
             SCANINTERVAL = interval
