@@ -12,7 +12,7 @@
 * Downloading **Web Series** using online sources normally unavailable to Sonarr
 * Ability to specify the downloaded video format globally or per series
 * Downloads new episodes automatically once available
-* Imports directly to Sonarr and it can then update your plex as and example
+* Imports directly to Sonarr, which can then update your Plex server, as an example
 * Allows setting time offsets to handle prerelease series
 * Can pass cookies.txt to handle site logins
 
@@ -21,7 +21,7 @@
 Firstly you need a series that is available online in the supported sites that YouTube-DL can grab from.
 Secondly you need to add this to Sonarr and monitor the episodes that you want.
 Thirdly edit your config.yml accordingly so that this knows where your Sonarr is, which series you are after and where to grab it from.
-Lastly be aware that this requires the TVDB to match exactly what the episodes titles are in the scan, generally this is ok but as its an openly editable site sometime there can be differences.
+Lastly be aware that this requires the TVDB to match exactly what the episodes titles are in the scan, generally this is ok but as it's an openly editable site sometime there can be differences.
 
 ## Supported Architectures
 
@@ -41,7 +41,7 @@ The architectures supported by this image are:
 
 ## Great how do I get started
 
-Obviously its a docker image so you need docker, if you don't know what that is you need to look into that first.
+Obviously it's a docker image, so you need docker. If you don't know what that is you need to look into that first.
 
 ### docker
 
