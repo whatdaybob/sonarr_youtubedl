@@ -108,6 +108,16 @@ class SonarrYTDL(object):
         except Exception:
             sys.exit("Error with series config.yml values.")
 
+    def sonarr_response_handler(self, response):
+        if response.status_code != 200:
+            sys.exit('Issue communicating with sonarr!')
+        elif response.status_code == 200:
+            if isinstance(response.json(), list):
+                return response.json()
+            # If sonarr is available but doesn't return a list (can do this when errors like disk space happen)
+            else:
+                sys.exit('Sonarr available but not returning correct information.')
+
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series
 
@@ -124,7 +134,7 @@ class SonarrYTDL(object):
             self.base_url),
             args
         )
-        return res.json()
+        return self.sonarr_response_handler(res)
 
     def get_series(self):
         """Return all series in your collection
@@ -136,23 +146,8 @@ class SonarrYTDL(object):
         res = self.request_get("{}/api/series".format(
             self.base_url
         ))
-        return res.json()
+        return self.sonarr_response_handler(res)
 
-    # def get_series_by_series_id(self, series_id):
-    #     """Return the series with the matching ID or 404 if no matching series is found
-
-    #     Args:
-    #         series_id (int): _description_
-
-    #     Returns:
-    #         _type_: _description_
-    #     """        
-    #     logger.debug('Begin call Sonarr for specific series series_id: {}'.format(series_id))
-    #     res = self.request_get("{}/api/series/{}".format(
-    #         self.base_url,
-    #         series_id
-    #     ))
-    #     return res.json()
 
     def request_get(self, url, params=None):
         """Wrapper on the requests.get"""
@@ -409,6 +404,10 @@ class SonarrYTDL(object):
                     playlist,
                     download=False
                 )
+                # Handle no results returned (possible deleted channel or issue with cookies) 
+                if result == None:
+                    logger.error('url {0} returned no videos, please check config.'.format(playlist))
+                    return False, ''
         except Exception as e:
             logger.error(e)
         else:
