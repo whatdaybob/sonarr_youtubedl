@@ -71,8 +71,8 @@ class SonarrYTDL(object):
 
         try:
             scheme = "http"
-            if cfg['sonarr']['ssl']:
-                scheme == "https"
+            if cfg['sonarr']['ssl'] in ['true', 'True']:
+                scheme = "https"
             self.base_url = "{0}://{1}:{2}".format(
                 scheme,
                 cfg['sonarr']['host'],
