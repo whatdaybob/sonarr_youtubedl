@@ -150,7 +150,15 @@ class SonarrYTDL(object):
 
 
     def request_get(self, url, params=None):
-        """Wrapper on the requests.get"""
+        """Wrapper on the requests.get
+
+        Args:
+            url (str): api that accepts put requests
+            params (str, optional): additional url parameters. Defaults to None.
+            
+        Returns:
+            Response: api response
+        """
         logger.debug('Begin GET with url: {}'.format(url))
         args = {
             "apikey": self.api_key
@@ -201,7 +209,7 @@ class SonarrYTDL(object):
             series_id (int): Sonarr series id
 
         Returns:
-            _type_: _description_
+            response: Sonarr rescan series API response
         """
 
         logger.debug('Begin call Sonarr to rescan for series_id: {}'.format(series_id))
@@ -321,10 +329,13 @@ class SonarrYTDL(object):
 
     def appendcookie(self, ytdlopts, cookies=None):
         """Checks if specified cookie file exists in config
-        - ``ytdlopts``: Youtube-dl options to append cookie to
-        - ``cookies``: filename of cookie file to append to Youtube-dl opts
-        returns:
-            ytdlopts
+
+        Args:
+            ytdlopts (dict): Youtube-dl options to append cookie to
+            cookies (str, optional): path to cookie file. Defaults to None.
+
+        Returns:
+            dict: Youtube-dl options
                 original if problem with cookies file
                 updated with cookies value if cookies file exists
         """

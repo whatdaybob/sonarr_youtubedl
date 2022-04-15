@@ -8,19 +8,21 @@ from logging.handlers import RotatingFileHandler
 
 
 CONFIGFILE = os.environ['CONFIGPATH']
-# CONFIGPATH = CONFIGFILE.replace('config.yml', '')
-
 
 def upperescape(string):
-    """Uppercase and Escape string. Used to help with YT-DL regex match.
-    - ``string``: string to manipulate
+    """ Uppercase and Escape string. 
+        Used to help with YT-DL regex match
+        Standardises character and makes guesses at punctuation
 
-    returns:
-        ``string``: str new string
-    """
-    # UPPERCASE as YTDL is case insensitive for ease.
+    Args:
+        string (str): the string to manipulate
+
+    Returns:
+        str: regex escaped string
+    """    
+    # YTDL is case insensitive for ease.
     string = string.upper() 
-    # Remove quote characters as YTDL converts these.
+    # Standardise quote characters as YTDL converts these.
     string = string.replace('’',"'") 
     string = string.replace('“','"')
     string = string.replace('”','"')
@@ -41,12 +43,11 @@ def upperescape(string):
 
 
 def checkconfig():
-    """Checks if config files exist in config path
-    If no config available, will copy template to config folder and exit script
+    """ Checks if config files exist in config path
+        If no config available, will copy template to config folder and exit script
 
-    returns:
-
-        `cfg`: dict containing configuration values
+    Returns:
+        dict: configuration values
     """
     logger = logging.getLogger('sonarr_youtubedl')
     config_template = os.path.abspath(CONFIGFILE + '.template')
@@ -74,11 +75,13 @@ def checkconfig():
 
 def offsethandler(airdate, offset):
     """Adjusts an episodes airdate
-    - ``airdate``: Airdate from sonarr # (datetime)
-    - ``offset``: Offset from series config.yml # (dict)
 
-    returns:
-        ``airdate``: datetime updated original airdate
+    Args:
+        airdate (datetime): Airdate from sonarr
+        offset (dict): Offsets from series config.yml 
+
+    Returns:
+        datetime: adjusted airdate
     """
     weeks = 0
     days = 0
@@ -115,6 +118,12 @@ class YoutubeDLLogger(object):
 
 
 def ytdl_hooks_debug(d):
+    """ Debug logging hooks for Youtube DL download process.
+        Updates the logger with download progress percent and ETA
+
+    Args:
+        d (dict): current youtube dl download status
+    """
     logger = logging.getLogger('sonarr_youtubedl')
     if d['status'] == 'finished':
         file_tuple = os.path.split(os.path.abspath(d['filename']))
@@ -125,12 +134,28 @@ def ytdl_hooks_debug(d):
 
 
 def ytdl_hooks(d):
+    """ Standard logging hooks for Youtube DL download process.
+        Updates the logger only when completed.
+
+    Args:
+        d (dict): Youtube DL complete message
+    """
     logger = logging.getLogger('sonarr_youtubedl')
     if d['status'] == 'finished':
         file_tuple = os.path.split(os.path.abspath(d['filename']))
         logger.info("      Downloaded - {}".format(file_tuple[1]))
 
 def setup_logging(lf_enabled=True, lc_enabled=True, debugging=False):
+    """ Function to setup logging
+
+    Args:
+        lf_enabled (bool, optional): is log file enabled. Defaults to True.
+        lc_enabled (bool, optional): is console logging enabled. Defaults to True.
+        debugging (bool, optional): is debugging enabled. Defaults to False.
+
+    Returns:
+        Logger: used to pass logging information to
+    """    
     log_level = logging.INFO
     log_level = logging.DEBUG if debugging == True else log_level
     logger = logging.getLogger('sonarr_youtubedl')
