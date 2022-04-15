@@ -1,6 +1,7 @@
 import requests
 import urllib.parse
 import yt_dlp
+from yt_dlp.utils import DateRange
 import os
 import sys
 import re
@@ -251,6 +252,14 @@ class SonarrYTDL(object):
                             ser['site_regex_replace'] = regex['site']['replace']
                     if 'offset' in wnt:
                         ser['offset'] = wnt['offset']
+                    if 'ignore_daterange' in wnt:
+                        try:
+                            if str(wnt['ignore_daterange']).lower() in ['true','t', 'y', 'yes']:
+                                ser['ignore_daterange'] = True
+                        except:
+                            ser['ignore_daterange'] = False
+                    else:
+                        ser['ignore_daterange'] = False
                     if 'cookies_file' in wnt:
                         ser['cookies_file'] = wnt['cookies_file']
                     if 'format' in wnt:
@@ -371,13 +380,14 @@ class SonarrYTDL(object):
         else:
             return ytdlopts
 
-    def ytdl_eps_search_opts(self, regextitle, playlistreverse, cookies=None):
+    def ytdl_eps_search_opts(self, regextitle, playlistreverse, cookies=None, daterange=None):
         """Generates the Youtube DL options for searching a specific episode in a playlist
 
         Args:
             regextitle (str): Regex to use to match the episode name in youtube
             playlistreverse (bool): Search playlist videos in reverse order
             cookies (str, optional): cookie file location. Defaults to None.
+            daterange (dict, optional): dict containing ytdl DateRange.
         
         Returns:
             dict: Youtube DL options
@@ -388,8 +398,11 @@ class SonarrYTDL(object):
             'playlistreverse': playlistreverse,
             'matchtitle': regextitle,
             'quiet': True,
-
         }
+        if daterange:
+            ytdlopts.update({
+                'daterange': daterange['daterange']
+            })
         if self.debug is True:
             ytdlopts.update({
                 'quiet': False,
@@ -450,12 +463,17 @@ class SonarrYTDL(object):
                 logger.info("  {}:".format(ser['title']))
                 for e, eps in enumerate(episodes):
                     if ser['id'] == eps['seriesId']:
+                        # Do we use a daterange to match?
+                        YDL_daterange = None
+                        if not ser['ignore_daterange']:
+                            airDate = datetime.strptime(eps['airDate'], '%Y-%m-%d')
+                            YDL_daterange = {'daterange':DateRange((offsethandler(airDate,{'days': '-1'})).strftime("%Y%m%d"),(offsethandler(airDate,{'days': '1'})).strftime("%Y%m%d"))}
+                        # Do we pass cookies to get the videos?
                         cookies = None
-                        url = ser['url']
                         if 'cookies_file' in ser:
                             cookies = ser['cookies_file']
-                        ydleps = self.ytdl_eps_search_opts(upperescape(eps['title']), ser['playlistreverse'], cookies)
-                        found, dlurl = self.ytsearch(ydleps, url)
+                        ydleps = self.ytdl_eps_search_opts(upperescape(eps['title']), ser['playlistreverse'], cookies, YDL_daterange)
+                        found, dlurl = self.ytsearch(ydleps, ser['url'])
                         if found:
                             logger.info("    {}: Found - {}:".format(e + 1, eps['title']))
                             ytdl_format_options = {
