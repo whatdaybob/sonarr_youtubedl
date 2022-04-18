@@ -30,6 +30,17 @@ def upperescape(string):
     string = re.escape(string)
     # Make it look for and as whole or ampersands
     string = string.replace('\\ AND\\ ','\\ (AND|&)\\ ')
+    # Handle some numerals being incorrect
+    string = string.replace("1","(1|I)")
+    string = string.replace("2","(2|II)")
+    string = string.replace("3","(3|III)")
+    string = string.replace("4","(4|IV)")
+    string = string.replace("5","(5|V)")
+    string = string.replace("6","(6|VI)")
+    string = string.replace("7","(7|VII)")
+    string = string.replace("8","(8|VIII)")
+    string = string.replace("9","(9|IX)")
+    string = string.replace("10","(10|X)")
     # Make punctuation optional for human error
     string = string.replace("'","([']?)") # optional apostrophe
     string = string.replace(",","([,]?)") # optional comma
