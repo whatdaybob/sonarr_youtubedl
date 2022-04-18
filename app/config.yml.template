@@ -7,8 +7,8 @@ sonarr:
     apikey: 12341234
     ssl: false
 ytdl:
-  # For information on format refer to https://github.com/ytdl-org/youtube-dl#format-selection
-    default_format: bestvideo[width<=1920]+bestaudio/best[width<=1920]
+  # default ytdl video format, for guidence, please see https://github.com/ytdl-org/youtube-dl#format-selection
+    default_format: bestvideo[ext=mp4][width<=1920]+bestaudio[ext=m4a]/bestvideo[ext=mp4][width<=1920]+bestaudio
 series:
   # Standard channel to check
   - title: Smarter Every Day
