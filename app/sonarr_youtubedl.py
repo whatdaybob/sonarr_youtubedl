@@ -11,6 +11,7 @@ import schedule
 import time
 import logging
 import argparse
+import re
 
 # allow debug arg for verbose logging
 parser = argparse.ArgumentParser(description='Loads Configuration.')
@@ -297,12 +298,12 @@ class SonarrYTDL(object):
             episodes = self.get_episodes_by_series_id(ser['id'])
             for eps in episodes[:]:
                 eps_date = now
+                if not eps['monitored']:
+                    episodes.remove(eps)
                 if "airDateUtc" in eps:
                     eps_date = datetime.strptime(eps['airDateUtc'], date_format)
                     if 'offset' in ser:
                         eps_date = offsethandler(eps_date, ser['offset'])
-                if not eps['monitored']:
-                    episodes.remove(eps)
                 elif eps['hasFile']:
                     episodes.remove(eps)
                 elif eps_date > now:
@@ -424,7 +425,7 @@ class SonarrYTDL(object):
 
         Returns:
             (bool): True if found, False if not.
-            (str):  direct video url if found, empty string if not.
+            (dict): Matched video result.
         """
 
         try:
@@ -441,6 +442,7 @@ class SonarrYTDL(object):
             logger.error(e)
         else:
             video_url = None
+            # Handle playlists and return first url
             if 'entries' in result and len(result['entries']) > 0:
                 try:
                     video_url = result['entries'][0].get('webpage_url')
@@ -448,21 +450,41 @@ class SonarrYTDL(object):
                     logger.error(e)
             else:
                 video_url = result.get('webpage_url')
+            # Handle singular urls
             if playlist == video_url:
-                return False, ''
+                logger.debug('Matched with original url')
+                return True, result
+            # If no urls returned
             if video_url is None:
                 logger.error('No video_url')
                 return False, ''
-            else:
-                return True, video_url
+            # Assume all is good
+            return True, result
 
     def download(self, series, episodes):
         if len(series) != 0:
             logger.info("Processing Wanted Downloads")
-            for s, ser in enumerate(series):
+            # Loop through Sonarr Wanted Series
+            wanted_series = [e['seriesId'] for e in episodes]
+            for _, ser in enumerate(series):
+                # This may be redundant as we filter it with episodes
+                if ser['id'] not in wanted_series:
+                    continue
                 logger.info("  {}:".format(ser['title']))
+                # Get a list of entries in the url for the series from config
+                with yt_dlp.YoutubeDL({"extract_flat": True, "quiet": (not self.debug)}) as ydl:
+                    logger.info(f"    Extracting urls from {ser['url']}")
+                    playlist_dict = ydl.extract_info(ser['url'], download=False)
+                    logger.debug(f"    Extracted {len(playlist_dict['entries'])} entries")
+                # Loop wanted episodes
                 for e, eps in enumerate(episodes):
                     if ser['id'] == eps['seriesId']:
+                        urls = []
+                        # Regex Match on the playlist names
+                        for video in playlist_dict["entries"]:
+                            x = re.match(upperescape(eps['title']), video['title'], flags=re.IGNORECASE)
+                            if None != x:
+                                urls.append(video['url'])
                         # Do we use a daterange to match?
                         YDL_daterange = None
                         if not ser['ignore_daterange']:
@@ -473,62 +495,68 @@ class SonarrYTDL(object):
                         if 'cookies_file' in ser:
                             cookies = ser['cookies_file']
                         ydleps = self.ytdl_eps_search_opts(upperescape(eps['title']), ser['playlistreverse'], cookies, YDL_daterange)
-                        found, dlurl = self.ytsearch(ydleps, ser['url'])
-                        if found:
-                            logger.info("    {}: Found - {}:".format(e + 1, eps['title']))
-                            ytdl_format_options = {
-                                'format': self.ytdl_format,
-                                'quiet': True,
-                                'merge-output-format': 'mp4',
-                                'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
-                                    ser['path'],
-                                    eps['seasonNumber'],
-                                    ser['title'],
-                                    eps['episodeNumber'],
-                                    eps['title']
-                                ),
-                                'progress_hooks': [ytdl_hooks],
-                                'noplaylist': True,
-                            }
-                            ytdl_format_options = self.appendcookie(ytdl_format_options, cookies)
-                            if 'format' in ser:
-                                ytdl_format_options = self.customformat(ytdl_format_options, ser['format'])
-                            if 'subtitles' in ser:
-                                if ser['subtitles']:
-                                    postprocessors = []
-                                    postprocessors.append({
-                                        'key': 'FFmpegSubtitlesConvertor',
-                                        'format': 'srt',
-                                    })
-                                    postprocessors.append({
-                                        'key': 'FFmpegEmbedSubtitle',
-                                    })
-                                    autosubs = str(ser['subtitles_autogenerated']).lower() in ['true','t', 'y', 'yes']
+                        # Pass into downloader to match, daterange should help match the correct if there is multiple
+                        for url in urls:
+                            found, result = self.ytsearch(ydleps, url)
+                            if found:
+                                logger.info("    {}: Found - {}:".format(e + 1, eps['title']))
+                                quality = 'WEBDL'
+                                if result.get('height') in (2160,1080,720,480):
+                                    quality = 'WEBDL-{0}p'.format(result['height'])
+                                ytdl_format_options = {
+                                    'format': self.ytdl_format,
+                                    'quiet': True,
+                                    'merge-output-format': 'mp4',
+                                    'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} {5}.mp4'.format(
+                                        ser['path'],
+                                        eps['seasonNumber'],
+                                        ser['title'],
+                                        eps['episodeNumber'],
+                                        eps['title'],
+                                        quality
+                                    ),
+                                    'progress_hooks': [ytdl_hooks],
+                                    'noplaylist': True,
+                                }
+                                ytdl_format_options = self.appendcookie(ytdl_format_options, cookies)
+                                if 'format' in ser:
+                                    ytdl_format_options = self.customformat(ytdl_format_options, ser['format'])
+                                if 'subtitles' in ser:
+                                    if ser['subtitles']:
+                                        postprocessors = []
+                                        postprocessors.append({
+                                            'key': 'FFmpegSubtitlesConvertor',
+                                            'format': 'srt',
+                                        })
+                                        postprocessors.append({
+                                            'key': 'FFmpegEmbedSubtitle',
+                                        })
+                                        autosubs = str(ser['subtitles_autogenerated']).lower() in ['true','t', 'y', 'yes']
+                                        ytdl_format_options.update({
+                                            'writesubtitles': True,
+                                            'writeautomaticsub': autosubs,
+                                            'subtitleslangs': ser['subtitles_languages'],
+                                            'postprocessors': postprocessors,
+                                        })
+                                if self.debug is True:
                                     ytdl_format_options.update({
-                                        'writesubtitles': True,                                        
-                                        'writeautomaticsub': autosubs,
-                                        'subtitleslangs': ser['subtitles_languages'],
-                                        'postprocessors': postprocessors,
+                                        'quiet': False,
+                                        'logger': YoutubeDLLogger(),
+                                        'progress_hooks': [ytdl_hooks_debug],
                                     })
-
-
-                            if self.debug is True:
-                                ytdl_format_options.update({
-                                    'quiet': False,
-                                    'logger': YoutubeDLLogger(),
-                                    'progress_hooks': [ytdl_hooks_debug],
-                                })
-                                logger.debug('Youtube-DL opts used for downloading')
-                                logger.debug(ytdl_format_options)
-                            try:
-                                with yt_dlp.YoutubeDL(ytdl_format_options) as ydl:
-                                    ydl.download([dlurl])
-                                self.rescanseries(ser['id'])
-                                logger.info("      Downloaded - {}".format(eps['title']))
-                            except Exception as e:
-                                logger.error("      Failed - {} - {}".format(eps['title'], e))
-                        else:
-                            logger.info("    {}: Missing - {}:".format(e + 1, eps['title']))
+                                    logger.debug('Youtube-DL opts used for downloading')
+                                    logger.debug(ytdl_format_options)
+                                try:
+                                    logger.info("      Downloading - {}".format(eps['title']))
+                                    with yt_dlp.YoutubeDL(ytdl_format_options) as ydl:
+                                        # ydl.download([dlurl])
+                                        ydl.download(result['webpage_url'])
+                                    self.rescanseries(ser['id'])
+                                    logger.info("      Downloaded - {}".format(eps['title']))
+                                except Exception as e:
+                                    logger.error("      Failed - {} - {}".format(eps['title'], e))
+                            else:
+                                logger.info("    {}: Missing - {}:".format(e + 1, eps['title']))
         else:
             logger.info("Nothing to process")
 
