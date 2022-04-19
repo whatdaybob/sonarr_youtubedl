@@ -14,7 +14,11 @@ import argparse
 
 # allow debug arg for verbose logging
 parser = argparse.ArgumentParser(description='Loads Configuration.')
-parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+parser.add_argument(
+    '--debug',
+    action='store_true',
+    help='Enable debug logging'
+)
 args = parser.parse_args()
 
 # setup logger
@@ -44,7 +48,7 @@ class SonarrYTDL(object):
             cfg (dict): Configuration File
 
         """
- 
+
         try:
             self.set_scan_interval(cfg['sonarrytdl']['scan_interval'])
             try:
@@ -74,11 +78,7 @@ class SonarrYTDL(object):
             scheme = "http"
             if cfg['sonarr']['ssl'] in ['true', 'True']:
                 scheme = "https"
-            self.base_url = "{0}://{1}:{2}".format(
-                scheme,
-                cfg['sonarr']['host'],
-                str(cfg['sonarr']['port'])
-            )
+            self.base_url = f"{scheme}://{cfg['sonarr']['host']}:{str(cfg['sonarr']['port'])}"
             self.api_key = cfg['sonarr']['apikey']
         except Exception:
             sys.exit("Error with sonarr config.yml values.")
@@ -115,9 +115,10 @@ class SonarrYTDL(object):
         elif response.status_code == 200:
             if isinstance(response.json(), list):
                 return response.json()
-            # If sonarr is available but doesn't return a list (can do this when errors like disk space happen)
+            # If sonarr is available but doesn't return a list
+            # This can happen when errors like disk space occur
             else:
-                sys.exit('Sonarr available but not returning correct information.')
+                sys.exit('Sonarr available but error received.')
 
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series
@@ -129,24 +130,19 @@ class SonarrYTDL(object):
             list: all episodes in the given series
         """
 
-        logger.debug('Begin call Sonarr for all episodes for series_id: {}'.format(series_id))
+        logger.debug(f'Sonarr: Request episodes for series_id: {series_id}')
         args = {'seriesId': series_id}
-        res = self.request_get("{}/api/episode".format(
-            self.base_url),
-            args
-        )
+        res = self.request_get(f"{self.base_url}/api/episode", args)
         return self.sonarr_response_handler(res)
 
     def get_series(self):
         """Return all series in your collection
-        
+
         Returns:
-            list: shows available in sonarr 
+            list: shows available in sonarr
         """
         logger.debug('Begin call Sonarr for all available series')
-        res = self.request_get("{}/api/series".format(
-            self.base_url
-        ))
+        res = self.request_get(f"{self.base_url}/api/series")
         return self.sonarr_response_handler(res)
 
     def request_get(self, url, params=None):
@@ -155,21 +151,18 @@ class SonarrYTDL(object):
         Args:
             url (str): api that accepts put requests
             params (str, optional): additional url parameters. Defaults to None.
-            
+
         Returns:
             Response: api response
         """
-        logger.debug('Begin GET with url: {}'.format(url))
+        logger.debug(f"Begin GET with url: {url}")
         args = {
             "apikey": self.api_key
         }
         if params is not None:
-            logger.debug('Begin GET with params: {}'.format(params))
+            logger.debug("Begin GET with params: {params}")
             args.update(params)
-        url = "{}?{}".format(
-            url,
-            urllib.parse.urlencode(args)
-        )
+        url = f"{url}?{urllib.parse.urlencode(args)}"
         res = requests.get(url)
         return res
 
@@ -183,8 +176,8 @@ class SonarrYTDL(object):
 
         Returns:
             Response: api response
-        """        
-        logger.debug('Begin PUT with url: {}'.format(url))
+        """
+        logger.debug(f"Begin PUT with url: {url}")
         headers = {
             'Content-Type': 'application/json',
         }
@@ -193,7 +186,7 @@ class SonarrYTDL(object):
         )
         if params is not None:
             args.update(params)
-            logger.debug('Begin PUT with params: {}'.format(params))
+            logger.debug(f"Begin PUT with params: {params}")
         res = requests.post(
             url,
             headers=headers,
@@ -212,13 +205,13 @@ class SonarrYTDL(object):
             response: Sonarr rescan series API response
         """
 
-        logger.debug('Begin call Sonarr to rescan for series_id: {}'.format(series_id))
+        logger.debug(f"Begin call Sonarr to rescan for series_id: {series_id}")
         data = {
             "name": "RescanSeries",
             "seriesId": str(series_id)
         }
         res = self.request_put(
-            "{}/api/command".format(self.base_url),
+            f"{self.base_url}/api/command",
             None,
             data
         )
@@ -226,11 +219,11 @@ class SonarrYTDL(object):
 
     def filterseries(self):
         """Return all series in Sonarr that are to be downloaded by youtube-dl
-        
+
         Returns:
             dict: containing configuration values
         """
-        
+
         series = self.get_series()
         matched = []
         for ser in series[:]:
@@ -253,9 +246,9 @@ class SonarrYTDL(object):
                         ser['offset'] = wnt['offset']
                     if 'ignore_daterange' in wnt:
                         try:
-                            if str(wnt['ignore_daterange']).lower() in ['true','t', 'y', 'yes']:
+                            if str(wnt['ignore_daterange']).lower() in ['true', 't', 'y', 'yes']:
                                 ser['ignore_daterange'] = True
-                        except:
+                        except Exception:
                             ser['ignore_daterange'] = False
                     else:
                         ser['ignore_daterange'] = False
@@ -276,13 +269,13 @@ class SonarrYTDL(object):
                     matched.append(ser)
         for check in matched:
             if not check['monitored']:
-                logger.warning('{0} is not currently monitored'.format(ser['title']))
+                logger.warning(f"{ser['title']} is not currently monitored")
         del series[:]
         return matched
 
     def getseriesepisodes(self, series):
-        """ Gets episodes for a series where they are in the configuration file and exists in sonarr. 
-            It only will get episodes that are monitored and dont have a file already.    
+        """ Gets episodes for a series where they are in the configuration file and exists in sonarr.
+            It only will get episodes that are monitored and dont have a file already.
 
         Args:
             series (list): list of series to get episodes for
@@ -320,30 +313,23 @@ class SonarrYTDL(object):
                             for regex in ser['sonarr_regex']:
                                 match = regex['match']
                                 replace = regex['replace']
-                                logger.debug('Updating episode title "{0}" with regex "{1}" and replacement "{2}"'.format(eps['title'], match, replace))
+                                logger.debug(f"Updating episode title '{eps['title']}' with regex '{match}' and replacement '{replace}'")
                                 eps['title'] = re.sub(match, replace, eps['title'])
-                                logger.debug('New title "{0}"'.format(eps['title']))
+                                logger.debug(f"New title '{eps['title']}'")
                         except TypeError:
-                            logger.error('{0} has invalid settings for sonarr regex'.format(ser['title']))
+                            logger.error(f"{ser['title']} has invalid settings for sonarr regex")
                 else:
                     episodes.remove(eps)
                     continue
                 needed.append(eps)
             # If no episodes needed remove series
             if len(episodes) == 0:
-                logger.info('{0} no episodes needed'.format(ser['title']))
+                logger.info(f"{ser['title']} no episodes needed")
                 series.remove(ser)
             else:
-                logger.info('{0} missing {1} episodes'.format(
-                    ser['title'],
-                    len(episodes)
-                ))
+                logger.info(f"{ser['title']} missing {len(episodes)} episodes")
                 for i, e in enumerate(episodes):
-                    logger.info('  {0}: {1} - {2}'.format(
-                        i + 1,
-                        ser['title'],
-                        e['title']
-                    ))
+                    logger.info(f"  {i + 1}: {ser['title']} - {e['title']}")
         return needed
 
     def appendcookie(self, ytdlopts, cookies=None):
@@ -366,9 +352,9 @@ class SonarrYTDL(object):
                     'cookiefile': cookie_path
                 })
                 # if self.debug is True:
-                logger.debug('  Cookies file used: {}'.format(cookie_path))
+                logger.debug(f"  Cookies file used: {cookie_path}")
             if cookie_exists is False:
-                logger.warning('  cookie files specified but doesn''t exist.')
+                logger.warning("  cookie files specified but doesn't exist.")
             return ytdlopts
         else:
             return ytdlopts
@@ -398,7 +384,7 @@ class SonarrYTDL(object):
             playlistreverse (bool): Search playlist videos in reverse order
             cookies (str, optional): cookie file location. Defaults to None.
             daterange (dict, optional): dict containing ytdl DateRange.
-        
+
         Returns:
             dict: Youtube DL options
         """
@@ -443,9 +429,9 @@ class SonarrYTDL(object):
                     playlist,
                     download=False
                 )
-                # Handle no results returned (possible deleted channel or issue with cookies) 
-                if result == None:
-                    logger.error('url {0} returned no videos, please check config.'.format(playlist))
+                # Handle no results returned (possible deleted channel or issue with cookies)
+                if result is None:
+                    logger.error(f"url {playlist} returned no videos, please check config.")
                     return False, ''
         except Exception as e:
             logger.error(e)
@@ -479,7 +465,7 @@ class SonarrYTDL(object):
                 # This may be redundant as we filter it with episodes
                 if ser['id'] not in wanted_series:
                     continue
-                logger.info("  {}:".format(ser['title']))
+                logger.info(f"  {ser['title']}:")
                 # Get a list of entries in the url for the series from config
                 with yt_dlp.YoutubeDL({"extract_flat": True, "quiet": (not self.debug)}) as ydl:
                     logger.info(f"    Extracting urls from {ser['url']}")
@@ -492,17 +478,17 @@ class SonarrYTDL(object):
                         # Regex Match on the playlist names
                         for video in playlist_dict["entries"]:
                             x = re.match(upperescape(eps['title']), video['title'], flags=re.IGNORECASE)
-                            if None != x:
+                            if None is not x:
                                 urls.append(video['url'])
                         # Do we use a daterange to match?
                         YDL_daterange = None
                         try:
                             if not ser['ignore_daterange']:
                                 airDate = datetime.strptime(eps['airDate'], '%Y-%m-%d')
-                                YDL_daterange = {'daterange':DateRange((offsethandler(airDate,{'days': '-1'})).strftime("%Y%m%d"),(offsethandler(airDate,{'days': '1'})).strftime("%Y%m%d"))}
+                                YDL_daterange = {'daterange': DateRange((offsethandler(airDate, {'days': '-1'})).strftime("%Y%m%d"), (offsethandler(airDate, {'days': '1'})).strftime("%Y%m%d"))}
                         except KeyError:
                             # Not possible but handle missing airDates
-                            logger.warning("    {}: Failure:Airdate Missing - {}:".format(e + 1, eps['title']))
+                            logger.warning(f"    {e + 1}: Failure:Airdate Missing - {eps['title']}:")
                         # Do we pass cookies to get the videos?
                         cookies = None
                         if 'cookies_file' in ser:
@@ -512,10 +498,10 @@ class SonarrYTDL(object):
                         for url in urls:
                             found, result = self.ytsearch(ydleps, url)
                             if found:
-                                logger.info("    {}: Found - {}:".format(e + 1, eps['title']))
+                                logger.info(f"    {e + 1}: Found - {eps['title']}:")
                                 quality = 'WEBDL'
-                                if result.get('height') in (2160,1080,720,480):
-                                    quality = 'WEBDL-{0}p'.format(result['height'])
+                                if result.get('height') in (2160, 1080, 720, 480):
+                                    quality = f"WEBDL-{result['height']}p"
                                 ytdl_format_options = {
                                     'format': self.ytdl_format,
                                     'quiet': True,
@@ -544,7 +530,7 @@ class SonarrYTDL(object):
                                         postprocessors.append({
                                             'key': 'FFmpegEmbedSubtitle',
                                         })
-                                        autosubs = str(ser['subtitles_autogenerated']).lower() in ['true','t', 'y', 'yes']
+                                        autosubs = str(ser['subtitles_autogenerated']).lower() in ['true', 't', 'y', 'yes']
                                         ytdl_format_options.update({
                                             'writesubtitles': True,
                                             'writeautomaticsub': autosubs,
@@ -560,16 +546,16 @@ class SonarrYTDL(object):
                                     logger.debug('Youtube-DL opts used for downloading')
                                     logger.debug(ytdl_format_options)
                                 try:
-                                    logger.info("      Downloading - {}".format(eps['title']))
+                                    logger.info(f"      Downloading - {eps['title']}")
                                     with yt_dlp.YoutubeDL(ytdl_format_options) as ydl:
                                         # ydl.download([dlurl])
                                         ydl.download(result['webpage_url'])
                                     self.rescanseries(ser['id'])
-                                    logger.info("      Downloaded - {}".format(eps['title']))
+                                    logger.info(f"      Downloaded - {eps['title']}")
                                 except Exception as e:
-                                    logger.error("      Failed - {} - {}".format(eps['title'], e))
+                                    logger.error(f"      Failed - {eps['title']} - {e}")
                             else:
-                                logger.info("    {}: Missing - {}:".format(e + 1, eps['title']))
+                                logger.info(f"    {e + 1}: Missing - {eps['title']}:")
         else:
             logger.info("Nothing to process")
 
@@ -582,9 +568,9 @@ class SonarrYTDL(object):
         global SCANINTERVAL
         if interval != SCANINTERVAL:
             SCANINTERVAL = interval
-            logger.info('Scan interval set to every {} minutes by config.yml'.format(interval))
+            logger.info(f"Scan interval set to every {interval} minutes by config.yml")
         else:
-            logger.info('Default scan interval of every {} minutes in use'.format(interval))
+            logger.info(f"Default scan interval of every {interval} minutes")
         return
 
 
