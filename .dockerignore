@@ -1,0 +1,7 @@
+#Ignoring git and cache folders
+.git
+.cache
+# Ignore generated files
+app/sonarr_root
+app/__pycache__
+**/*.pyc
