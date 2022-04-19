@@ -11,7 +11,6 @@ import schedule
 import time
 import logging
 import argparse
-import re
 
 # allow debug arg for verbose logging
 parser = argparse.ArgumentParser(description='Loads Configuration.')
@@ -149,7 +148,6 @@ class SonarrYTDL(object):
             self.base_url
         ))
         return self.sonarr_response_handler(res)
-
 
     def request_get(self, url, params=None):
         """Wrapper on the requests.get
@@ -298,17 +296,25 @@ class SonarrYTDL(object):
             episodes = self.get_episodes_by_series_id(ser['id'])
             for eps in episodes[:]:
                 eps_date = now
+                # remove episodes that dont have the monitored flag
                 if not eps['monitored']:
                     episodes.remove(eps)
+                    continue
+                # remove if already downloaded
+                if eps['hasFile']:
+                    episodes.remove(eps)
+                    continue
+                # remove if no airdate, these are tbc
                 if "airDateUtc" in eps:
                     eps_date = datetime.strptime(eps['airDateUtc'], date_format)
+                    # remove if airdate in future
+                    if eps_date > now:
+                        episodes.remove(eps)
+                        continue
+                    # add any offsets
                     if 'offset' in ser:
                         eps_date = offsethandler(eps_date, ser['offset'])
-                elif eps['hasFile']:
-                    episodes.remove(eps)
-                elif eps_date > now:
-                    episodes.remove(eps)
-                else:
+                    # Apply any regex to episode title
                     if 'sonarr_regex' in ser:
                         try:
                             for regex in ser['sonarr_regex']:
@@ -319,8 +325,11 @@ class SonarrYTDL(object):
                                 logger.debug('New title "{0}"'.format(eps['title']))
                         except TypeError:
                             logger.error('{0} has invalid settings for sonarr regex'.format(ser['title']))
-                    needed.append(eps)
+                else:
+                    episodes.remove(eps)
                     continue
+                needed.append(eps)
+            # If no episodes needed remove series
             if len(episodes) == 0:
                 logger.info('{0} no episodes needed'.format(ser['title']))
                 series.remove(ser)
@@ -487,9 +496,13 @@ class SonarrYTDL(object):
                                 urls.append(video['url'])
                         # Do we use a daterange to match?
                         YDL_daterange = None
-                        if not ser['ignore_daterange']:
-                            airDate = datetime.strptime(eps['airDate'], '%Y-%m-%d')
-                            YDL_daterange = {'daterange':DateRange((offsethandler(airDate,{'days': '-1'})).strftime("%Y%m%d"),(offsethandler(airDate,{'days': '1'})).strftime("%Y%m%d"))}
+                        try:
+                            if not ser['ignore_daterange']:
+                                airDate = datetime.strptime(eps['airDate'], '%Y-%m-%d')
+                                YDL_daterange = {'daterange':DateRange((offsethandler(airDate,{'days': '-1'})).strftime("%Y%m%d"),(offsethandler(airDate,{'days': '1'})).strftime("%Y%m%d"))}
+                        except KeyError:
+                            # Not possible but handle missing airDates
+                            logger.warning("    {}: Failure:Airdate Missing - {}:".format(e + 1, eps['title']))
                         # Do we pass cookies to get the videos?
                         cookies = None
                         if 'cookies_file' in ser:
