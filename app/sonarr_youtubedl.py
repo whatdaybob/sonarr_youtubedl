@@ -1,6 +1,6 @@
 import requests
 import urllib.parse
-import yt_dlp
+import youtube_dl
 import os
 import sys
 import re
@@ -309,7 +309,7 @@ class SonarrYTDL(object):
 
     def ytsearch(self, ydl_opts, playlist):
         try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                 result = ydl.extract_info(
                     playlist,
                     download=False
@@ -393,7 +393,7 @@ class SonarrYTDL(object):
                                 logger.debug('Youtube-DL opts used for downloading')
                                 logger.debug(ytdl_format_options)
                             try:
-                                yt_dlp.YoutubeDL(ytdl_format_options).download([dlurl])
+                                youtube_dl.YoutubeDL(ytdl_format_options).download([dlurl])
                                 self.rescanseries(ser['id'])
                                 logger.info("      Downloaded - {}".format(eps['title']))
                             except Exception as e:

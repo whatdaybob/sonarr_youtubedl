@@ -5,7 +5,7 @@
 ![Docker Stars](https://img.shields.io/docker/stars/whatdaybob/sonarr_youtubedl?style=flat-square)
 [![Docker Hub](https://img.shields.io/badge/Open%20On-DockerHub-blue)](https://hub.docker.com/r/whatdaybob/sonarr_youtubedl)
 
-[whatdaybob/sonarr_youtubedl](https://github.com/whatdaybob/Custom_Docker_Images/tree/master/sonarr_youtubedl) is a [Sonarr](https://sonarr.tv/) companion script to allow the automatic downloading of web series normally not available for Sonarr to search for. Using [YT-DLP](https://github.com/yt-dlp/yt-dlp) (a youtube-dl fork with added features) it allows you to download your webseries from the list of [supported sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md).
+[whatdaybob/sonarr_youtubedl](https://github.com/whatdaybob/Custom_Docker_Images/tree/master/sonarr_youtubedl) is a [Sonarr](https://sonarr.tv/) companion script to allow the automatic downloading of web series normally not available for Sonarr to search for. Using [Youtube-DL](https://ytdl-org.github.io/youtube-dl/index.html) it allows you to download your webseries from the list of [supported sites](https://ytdl-org.github.io/youtube-dl/supportedsites.html).
 
 ## Features
 
