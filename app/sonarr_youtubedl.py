@@ -56,11 +56,12 @@ class SonarrYTDL(object):
         try:
             scheme = "http"
             if cfg['sonarr']['ssl']:
-                scheme == "https"
-            self.base_url = "{0}://{1}:{2}".format(
+                scheme = "https"
+            self.base_url = "{0}://{1}:{2}/{3}".format(
                 scheme,
                 cfg['sonarr']['host'],
-                str(cfg['sonarr']['port'])
+                str(cfg['sonarr']['port']),
+                cfg['sonarr'].get('basedir', '')
             )
             self.api_key = cfg['sonarr']['apikey']
         except Exception:
