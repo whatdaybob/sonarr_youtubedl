@@ -61,7 +61,7 @@ jobs:
           context: .
           push: true
           file: ./Dockerfile
-          platforms: linux/386,linux/amd64,linux/arm/v5,linux/arm/v7,linux/arm64/v8
+          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm64/v8
           tags: whatdaybob/sonarr_youtubedl:${{ steps.tag.outputs.tag }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
