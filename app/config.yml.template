@@ -7,6 +7,8 @@ sonarr:
     apikey: 12341234
     ssl: false
     # basedir: '/sonarr'  # if you have sonarr running with a basedir set (e.g. behind a proxy)
+    # version: v4 # if running v4 beta, allows the v3 api endpoints
+
 ytdl:
   # For information on format refer to https://github.com/ytdl-org/youtube-dl#format-selection
     default_format: bestvideo[width<=1920]+bestaudio/best[width<=1920]

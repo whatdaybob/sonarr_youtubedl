@@ -54,9 +54,13 @@ class SonarrYTDL(object):
 
         # Sonarr Setup
         try:
+            api = "api"
             scheme = "http"
             basedir = ""
-            if cfg['sonarr']['ssl'].lower() == ['true']:
+            if cfg['sonarr'].get('version', '').lower() == 'v4':
+                api = "api/v3"
+                logger.debug('Sonarr api set to v4')
+            if cfg['sonarr']['ssl'].lower() == 'true':
                 scheme = "https"
             if cfg['sonarr'].get('basedir', ''):
                 basedir = '/' + cfg['sonarr'].get('basedir', '')
@@ -67,6 +71,7 @@ class SonarrYTDL(object):
                 str(cfg['sonarr']['port']),
                 basedir
             )
+            self.sonarr_api_version = api
             self.api_key = cfg['sonarr']['apikey']
         except Exception:
             sys.exit("Error with sonarr config.yml values.")
@@ -87,16 +92,18 @@ class SonarrYTDL(object):
         """Returns all episodes for the given series"""
         logger.debug('Begin call Sonarr for all episodes for series_id: {}'.format(series_id))
         args = {'seriesId': series_id}
-        res = self.request_get("{}/api/episode".format(
-            self.base_url),
-            args
+        res = self.request_get("{}/{}/episode".format(
+            self.base_url, 
+            self.sonarr_api_version
+            ), args
         )
         return res.json()
 
     def get_episode_files_by_series_id(self, series_id):
         """Returns all episode files for the given series"""
-        res = self.request_get("{}/api/episodefile?seriesId={}".format(
-            self.base_url,
+        res = self.request_get("{}/{}/episodefile?seriesId={}".format(
+            self.base_url, 
+            self.sonarr_api_version,
             series_id
         ))
         return res.json()
@@ -104,16 +111,18 @@ class SonarrYTDL(object):
     def get_series(self):
         """Return all series in your collection"""
         logger.debug('Begin call Sonarr for all available series')
-        res = self.request_get("{}/api/series".format(
-            self.base_url
+        res = self.request_get("{}/{}/series".format(
+            self.base_url, 
+            self.sonarr_api_version
         ))
         return res.json()
 
     def get_series_by_series_id(self, series_id):
         """Return the series with the matching ID or 404 if no matching series is found"""
         logger.debug('Begin call Sonarr for specific series series_id: {}'.format(series_id))
-        res = self.request_get("{}/api/series/{}".format(
+        res = self.request_get("{}/{}/series/{}".format(
             self.base_url,
+            self.sonarr_api_version,
             series_id
         ))
         return res.json()
@@ -162,8 +171,9 @@ class SonarrYTDL(object):
             "seriesId": str(series_id)
         }
         res = self.request_put(
-            "{}/api/command".format(self.base_url),
-            None,
+            "{}/{}/command".format(self.base_url),
+            None, 
+            self.sonarr_api_version,
             data
         )
         return res.json()
