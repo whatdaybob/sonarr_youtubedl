@@ -55,13 +55,17 @@ class SonarrYTDL(object):
         # Sonarr Setup
         try:
             scheme = "http"
-            if cfg['sonarr']['ssl']:
+            basedir = ""
+            if cfg['sonarr']['ssl'].lower() == ['true']:
                 scheme = "https"
-            self.base_url = "{0}://{1}:{2}/{3}".format(
+            if cfg['sonarr'].get('basedir', ''):
+                basedir = '/' + cfg['sonarr'].get('basedir', '')
+
+            self.base_url = "{0}://{1}:{2}{3}".format(
                 scheme,
                 cfg['sonarr']['host'],
                 str(cfg['sonarr']['port']),
-                cfg['sonarr'].get('basedir', '')
+                basedir
             )
             self.api_key = cfg['sonarr']['apikey']
         except Exception:
