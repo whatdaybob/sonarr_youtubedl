@@ -130,7 +130,7 @@ def ytdl_hooks(d):
         logger.info("      Downloaded - {}".format(file_tuple[1]))
 
 def setup_logging(lf_enabled=True, lc_enabled=True, debugging=False):
-
+    log_level = logging.INFO
     log_level = logging.DEBUG if debugging == True else log_level
     logger = logging.getLogger('sonarr_youtubedl')
     logger.setLevel(log_level)
