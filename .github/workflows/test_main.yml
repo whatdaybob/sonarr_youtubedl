@@ -13,9 +13,9 @@ jobs:
   docker:
     name: Docker
     runs-on: ubuntu-latest
-    # defaults:
-    #   run:
-    #     shell: bash
+    defaults:
+      run:
+        shell: bash
     steps:
 
       # https://github.com/marketplace/actions/checkout
