@@ -337,11 +337,11 @@ class SonarrYTDL(object):
                 try:
                     titles = [entry['title'].lower() for entry in result['entries']]
                     index = find_best_match_index(titles, name.lower())
-                    video_url = result['entries'][index].get('webpage_url')
+                    video_url = result['entries'][index].get('url')
                 except Exception as e:
                     logger.error(e)
             else:
-                video_url = result.get('webpage_url')
+                video_url = result.get('url')
             if playlist == video_url:
                 return False, ''
             if video_url is None:
