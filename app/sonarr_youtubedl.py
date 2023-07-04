@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import requests
 import urllib.parse
 import yt_dlp
@@ -87,6 +89,72 @@ class SonarrYTDL(object):
             self.series = cfg["series"]
         except Exception:
             sys.exit("Error with series config.yml values.")
+
+        # Path munging
+        self.path = ""
+        self.localpath = "/sonarr_root"
+
+        try:
+            self.path = cfg['sonarr']['path']
+            self.localpath = cfg['sonarr']['localpath']
+        except Exception:
+            pass
+#            sys.exit("Error with sonarr config.yml values.")
+
+        res = self.get_formats()
+        self.update_formats(res)
+        logger.debug("Using number Style: %s Folder: %s" % (self.numberStyle,self.seasonFormat))
+
+    def update_formats(self,res):
+        """Update Sonarr formats to python formats"""
+        for key in ['seasonFolderFormat', 'numberStyle']:
+            original = res[key]
+            if re.search(":",original):
+                temp = original
+                temp = temp[temp.find(':'):temp.find('}')]
+                length = len(temp)-1
+                rep = ":0"+str(length)+"d"
+                newval = original.replace(temp,rep)
+                res[key] = newval
+        self.seasonFormat = res['seasonFolderFormat']
+        self.numberStyle = res['numberStyle']
+
+    def get_formats(self):
+        """Return the naming formats from Sonarr"""
+        logger.debug('Get formats')
+        res = self.request_get("{}/{}/config/naming".format(
+            self.base_url,
+            self.sonarr_api_version)
+        )
+        return res.json()
+
+    def get_quality(self, id):
+        """Return the Quality Profile from Sonarr"""
+        logger.debug('Get Quality')
+        res = self.request_get("{}/{}/qualityprofile/{}".format(
+            self.base_url,
+            self.sonarr_api_version,
+            id)
+        )
+        return res.json()
+
+    def get_resolution_max_formats(self, quality_ids):
+        """Return dictionary of formats based upon max resolution for quality_ids set"""
+        res_dict = {}
+        trans_resolution = {480: 640, 720: 1280, 1080: 1920, 2160: 3840}
+
+        for id in sorted(quality_ids):
+            res = self.get_quality(id)
+            res_max = 0
+            for qual in res['items']:
+              if qual['allowed'] == True:
+                if 'quality' not in qual.keys():
+                    continue
+                resolution = qual['quality']['resolution']
+                res_max = max(res_max,resolution)
+            res_key = trans_resolution[res_max]
+            res_dict[id] = "bestvideo[width<={}]+bestaudio/best[width<={}]".format(res_key,res_key)
+        return res_dict
 
     def get_episodes_by_series_id(self, series_id):
         """Returns all episodes for the given series"""
@@ -224,6 +292,7 @@ class SonarrYTDL(object):
 
     def getseriesepisodes(self, series):
         needed = []
+        quality_ids = set()
         for ser in series[:]:
             episodes = self.get_episodes_by_series_id(ser['id'])
             for eps in episodes[:]:
@@ -244,6 +313,7 @@ class SonarrYTDL(object):
                         replace = ser['sonarr_regex_replace']
                         eps['title'] = re.sub(match, replace, eps['title'])
                     needed.append(eps)
+                    quality_ids.add(ser['qualityProfileId'])
                     continue
             if len(episodes) == 0:
                 logger.info('{0} no episodes needed'.format(ser['title']))
@@ -259,6 +329,7 @@ class SonarrYTDL(object):
                         ser['title'],
                         e['title']
                     ))
+        self.ytdl_quality = self.get_resolution_max_formats(quality_ids)
         return needed
 
     def appendcookie(self, ytdlopts, cookies=None):
@@ -363,15 +434,19 @@ class SonarrYTDL(object):
                         found, dlurl = self.ytsearch(ydleps, url)
                         if found:
                             logger.info("    {}: Found - {}:".format(e + 1, eps['title']))
+                            season_dir = self.seasonFormat.format(season=eps['seasonNumber'])
+                            number = self.numberStyle.format(season=eps['seasonNumber'],episode=eps['episodeNumber'])
+                            logger.debug("Profile: %s Using format: %s" % (ser['qualityProfileId'],
+                                            self.ytdl_quality[ser['qualityProfileId']]))
                             ytdl_format_options = {
-                                'format': self.ytdl_format,
+                                'format': self.ytdl_quality[ser['qualityProfileId']],
                                 'quiet': True,
                                 'merge-output-format': 'mp4',
-                                'outtmpl': '/sonarr_root{0}/Season {1}/{2} - S{1}E{3} - {4} WEBDL.%(ext)s'.format(
-                                    ser['path'],
-                                    eps['seasonNumber'],
+                                'outtmpl': '/{0}/{1}/{2} - {3} - {4} WEBDL.%(ext)s'.format(
+                                    ser['path'].replace(self.path,self.localpath),
+                                    season_dir,
                                     ser['title'],
-                                    eps['episodeNumber'],
+                                    number,
                                     eps['title']
                                 ),
                                 'progress_hooks': [ytdl_hooks],

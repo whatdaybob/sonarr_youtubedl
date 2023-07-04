@@ -6,8 +6,10 @@ sonarr:
     port: 8989  # sonarr default port
     apikey: 12341234
     ssl: false
+    path: "" # Path as defined by library directory for Sonarr
+    localpath: "/sonarr_root" # Path to Sonarr library as seen by local system
     # basedir: '/sonarr'  # if you have sonarr running with a basedir set (e.g. behind a proxy)
-    # version: v4 # if running v4 beta, allows the v3 api endpoints
+    version: v4 # if running v4 beta or current v3, allows the v3 api endpoints
 
 ytdl:
   # For information on format refer to https://github.com/ytdl-org/youtube-dl#format-selection
