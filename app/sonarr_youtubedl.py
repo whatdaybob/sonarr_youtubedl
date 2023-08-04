@@ -91,8 +91,8 @@ class SonarrYTDL(object):
                             self.ytdl_extra_args[key] = int(value)
                         except ValueError:
                             self.ytdl_extra_args[key] = value
-        except Exception:
-            sys.exit("Error with ytdl config.yml values.")
+        except Exception as e:
+            sys.exit(f"Error with ytdl config.yml values: {e}")
 
         # YTDL Setup
         try:
