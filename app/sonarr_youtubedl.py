@@ -81,10 +81,9 @@ class SonarrYTDL(object):
             self.ytdl_format = cfg['ytdl']['default_format']
 
             # Extra-args
-            if cfg['ytdl'].get('extra_args') == None:
-                self.ytdl_extra_args = dict()
-            else:
-                for key, value in cfg['ytdl']['extra_args']:
+            self.ytdl_extra_args = dict()
+            if cfg['ytdl'].get('extra_args') != None:
+                for key, value in cfg['ytdl']['extra_args'].items():
                     if value.lower() in ('true', 'false'):
                         self.ytdl_extra_args[key] = bool(value)
                     else:
