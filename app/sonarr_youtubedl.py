@@ -4,7 +4,7 @@ import yt_dlp
 import os
 import sys
 import re
-from utils import upperescape, checkconfig, offsethandler, YoutubeDLLogger, ytdl_hooks, ytdl_hooks_debug, setup_logging  # NOQA
+from utils import upperescape, checkconfig, offsethandler, YoutubeDLLogger, ytdl_hooks, ytdl_hooks_debug, setup_logging, find_best_match_index  # NOQA
 from datetime import datetime
 import schedule
 import time
@@ -322,7 +322,7 @@ class SonarrYTDL(object):
             logger.debug(ytdlopts)
         return ytdlopts
 
-    def ytsearch(self, ydl_opts, playlist):
+    def ytsearch(self, ydl_opts, playlist, name):
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 result = ydl.extract_info(
@@ -335,11 +335,13 @@ class SonarrYTDL(object):
             video_url = None
             if 'entries' in result and len(result['entries']) > 0:
                 try:
-                    video_url = result['entries'][0].get('webpage_url')
+                    titles = [entry['title'].lower() for entry in result['entries']]
+                    index = find_best_match_index(titles, name.lower())
+                    video_url = result['entries'][index].get('url')
                 except Exception as e:
                     logger.error(e)
             else:
-                video_url = result.get('webpage_url')
+                video_url = result.get('url')
             if playlist == video_url:
                 return False, ''
             if video_url is None:
@@ -360,7 +362,7 @@ class SonarrYTDL(object):
                         if 'cookies_file' in ser:
                             cookies = ser['cookies_file']
                         ydleps = self.ytdl_eps_search_opts(upperescape(eps['title']), ser['playlistreverse'], cookies)
-                        found, dlurl = self.ytsearch(ydleps, url)
+                        found, dlurl = self.ytsearch(ydleps, url, name=ser['title']+' - '+eps['title'])
                         if found:
                             logger.info("    {}: Found - {}:".format(e + 1, eps['title']))
                             ytdl_format_options = {
