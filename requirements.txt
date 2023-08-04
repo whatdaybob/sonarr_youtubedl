@@ -3,3 +3,4 @@ yt-dlp==2023.1.6
 pyyaml==6.0
 schedule==1.1.0
 fuzzywuzzy==0.18.0
+python-Levenshtein=0.21.1
