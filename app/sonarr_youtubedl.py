@@ -171,9 +171,8 @@ class SonarrYTDL(object):
             "seriesId": str(series_id)
         }
         res = self.request_put(
-            "{}/{}/command".format(self.base_url),
-            None, 
-            self.sonarr_api_version,
+            "{}/{}/command".format(self.base_url, self.sonarr_api_version),
+            None,
             data
         )
         return res.json()
