@@ -12,6 +12,13 @@ sonarr:
 ytdl:
   # For information on format refer to https://github.com/ytdl-org/youtube-dl#format-selection
     default_format: bestvideo[width<=1920]+bestaudio/best[width<=1920]
+
+    # Extra args for yt-dlp
+    #  see YoutubeDL class in https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/YoutubeDL.py
+    extra_args:
+      # e.g. Enable flat-scraping (Dont follow links on pages)
+      #   Requires less connections and is thus much faster, but requires videos to be on the same page as the provided link e.g. playlists or youtube-channel-video-page (see example for 'The Slow Mo Guys')
+      extract_flat: True
 series:
   # Standard channel to check
   - title: Smarter Every Day
@@ -20,7 +27,7 @@ series:
   # For information on cookies refer to https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl
   # For information on format refer to https://github.com/ytdl-org/youtube-dl#format-selection
   - title: The Slow Mo Guys
-    url: https://www.youtube.com/channel/UCUK0HBIBWgM2c4vsPhkYY4w
+    url: https://www.youtube.com/channel/UCUK0HBIBWgM2c4vsPhkYY4w/videos
     cookies_file: youtube_cookies.txt # located in the same config folder
     format: bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best
   # Youtube playlist of latest season with time offset, useful for member videos having early release

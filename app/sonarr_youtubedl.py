@@ -79,8 +79,20 @@ class SonarrYTDL(object):
         # YTDL Setup
         try:
             self.ytdl_format = cfg['ytdl']['default_format']
-        except Exception:
-            sys.exit("Error with ytdl config.yml values.")
+
+            # Extra-args
+            self.ytdl_extra_args = dict()
+            if cfg['ytdl'].get('extra_args') != None:
+                for key, value in cfg['ytdl']['extra_args'].items():
+                    if value.lower() in ('true', 'false'):
+                        self.ytdl_extra_args[key] = bool(value)
+                    else:
+                        try:
+                            self.ytdl_extra_args[key] = int(value)
+                        except ValueError:
+                            self.ytdl_extra_args[key] = value
+        except Exception as e:
+            sys.exit(f"Error with ytdl config.yml values: {e}")
 
         # YTDL Setup
         try:
@@ -260,6 +272,9 @@ class SonarrYTDL(object):
                     ))
         return needed
 
+    def append_extra_args(self, ytdlopts):
+        return {**ytdlopts, **self.ytdl_extra_args}
+
     def appendcookie(self, ytdlopts, cookies=None):
         """Checks if specified cookie file exists in config
         - ``ytdlopts``: Youtube-dl options to append cookie to
@@ -316,6 +331,7 @@ class SonarrYTDL(object):
                 'progress_hooks': [ytdl_hooks],
             })
         ytdlopts = self.appendcookie(ytdlopts, cookies)
+        ytdlopts = self.append_extra_args(ytdlopts)
         if self.debug is True:
             logger.debug('Youtube-DL opts used for episode matching')
             logger.debug(ytdlopts)
@@ -377,6 +393,7 @@ class SonarrYTDL(object):
                                 'noplaylist': True,
                             }
                             ytdl_format_options = self.appendcookie(ytdl_format_options, cookies)
+                            ytdlopts = self.append_extra_args(ytdlopts)
                             if 'format' in ser:
                                 ytdl_format_options = self.customformat(ytdl_format_options, ser['format'])
                             if 'subtitles' in ser:
